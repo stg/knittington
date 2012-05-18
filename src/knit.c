@@ -4,11 +4,15 @@
 //
 // senseitg@gmail.com 2012-May-17
 
+
+//== DECLARATIONS ====================================================
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <signal.h>
 
 // nibble access
 #define MSN(B) (((unsigned char)B)>>4)
@@ -36,7 +40,151 @@ static char cmds[8192]={0};
 static char cmd[256];
 
 // flags
-static bool halt=false;
+static bool halt=false,stop=false;
+
+//== SERIAL STUFF ====================================================
+
+#ifdef _WIN32
+
+#include <stdio.h>
+#include <windows.h>
+
+static HANDLE h_serial;
+
+// device has form "COMn"
+bool sopen(char* device) {
+	h_serial=CreateFile(device,GENERIC_READ|GENERIC_WRITE,0,0,OPEN_EXISTING,0,0);
+	return h_serial!=INVALID_HANDLE_VALUE;
+}
+
+bool sconfig(char* fmt) {
+	DCB dcb;
+	COMMTIMEOUTS cmt;
+  // clear dcb  
+	memset(&dcb,0,sizeof(DCB));
+	dcb.DCBlength=sizeof(DCB);
+	// configure serial parameters
+	if(!BuildCommDCB(fmt,&dcb)) return false;
+	dcb.fOutxCtsFlow=0;
+	dcb.fOutxDsrFlow=0;
+	dcb.fDtrControl=0;
+	dcb.fOutX=0;
+	dcb.fInX=0;
+	dcb.fRtsControl=0;
+	if(!SetCommState(h_serial,&dcb)) return false;
+	// configure buffers
+	if(!SetupComm(h_serial,1024,1024)) return false;
+	// configure timeouts	
+	cmt.ReadIntervalTimeout=100;
+	cmt.ReadTotalTimeoutMultiplier=100;
+	cmt.ReadTotalTimeoutConstant=100;
+	cmt.WriteTotalTimeoutConstant=100;
+	cmt.WriteTotalTimeoutMultiplier=100;
+	if( !SetCommTimeouts(h_serial,&cmt)) return false;
+	return true;
+}
+
+int32_t sread(void *p_read,uint16_t i_read) {
+	DWORD i_actual=0;
+	if(!ReadFile(h_serial,p_read,i_read,&i_actual,NULL)) return -1;
+	return (int32_t)i_actual;
+}
+
+int32_t swrite(void* p_write,uint16_t i_write) {
+	DWORD i_actual=0;
+	if(!WriteFile(h_serial,p_write,i_write,&i_actual,NULL)) return -1;
+	return (int32_t)i_actual;
+}
+
+bool sclose() {
+	return CloseHandle(h_serial)!=0;
+}
+
+#else
+
+#include <termios.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+static int h_serial, fd;
+
+// device has form "/dev/somedev"
+bool sopen(char* device) {
+	int h_serial=open(device,O_RDWR|O_NOCTTY|O_NDELAY);
+	return h_serial>=0;
+}
+
+bool sconfig(char* fmt) {
+	struct termios options;
+	char* argv[4];
+	unsigned char argc;
+	char* p_parse;
+	// quick and dirty parser
+	p_parse=fmt;
+	argc=1;
+	argv[0]=fmt;
+	while(*p_parse!=0) {
+		if(*p_parse==',') {
+			*p_parse=0;
+			if(argc>3) return false;
+			argv[argc++]=++p_parse;
+		} else p_parse++;
+	}
+	// configure baudrate
+	tcgetattr(h_serial,&options);
+	switch(atoi(argv[0])) {
+		case   1200: cfsetispeed(&options,B1200  ); cfsetospeed(&options,B1200  ); break;
+		case   2400: cfsetispeed(&options,B2400  ); cfsetospeed(&options,B2400  ); break;
+		case   4800: cfsetispeed(&options,B9600  ); cfsetospeed(&options,B9600  ); break;
+		case  19200: cfsetispeed(&options,B19200 ); cfsetospeed(&options,B19200 ); break;
+		case  38400: cfsetispeed(&options,B38400 ); cfsetospeed(&options,B38400 ); break;
+		case  57600: cfsetispeed(&options,B57600 ); cfsetospeed(&options,B57600 ); break;
+		case 115200: cfsetispeed(&options,B115200); cfsetospeed(&options,B115200); break;
+		default: return false;
+	}
+	// configure parity
+	switch(argv[1][0]) {
+		case 'n': case 'N': options.c_cflag&=~PARENB;                           break;
+		case 'o': case 'O': options.c_cflag|=~PARENB; options.c_cflag|= PARODD; break;
+		case 'e': case 'E': options.c_cflag|=~PARENB; options.c_cflag&=~PARODD; break;
+		default: return false;
+	}
+	// configure data bits
+	options.c_cflag&=~CSIZE;
+	switch(argv[2][0]) {
+		case '8': options.c_cflag|=CS8; break;
+		case '7': options.c_cflag|=CS7; break;
+		default: return false;
+	}
+	// configure stop bits
+	switch(argv[2][0]) {
+		case '1': options.c_cflag&=~CSTOPB; break;
+		case '2': options.c_cflag|= CSTOPB; break;
+		default: return false;
+	}	
+	// configure timeouts
+	options.c_cc[VMIN]=0;
+	options.c_cc[VTIME]=1; // wait for requested data 1/10 seconds
+	options.c_cflag|=CLOCAL|CREAD;
+	return tcsetattr(fd,TCSANOW,&options)==0;
+}
+
+int32_t sread(void* p_read,uint16_t i_read) {
+	return (int32_t)read(h_serial,p_read,(int)i_read);
+}
+
+int32_t swrite(void* p_write,uint16_t i_write) {
+	return (int32_t)write(h_serial,p_write,(int)i_write);
+}
+
+bool sclose() {
+	return close(h_serial)==0;
+}
+
+#endif
+
+
+//== UTIL FUNCTIONS ==================================================
 
 // command input routine that handles several
 // commands in one input as well as strings
@@ -80,6 +228,11 @@ bool read_cmd() {
 	return true;
 }
 
+// ctrl^c handler
+static void sigint(int z) {
+  stop=true;
+}
+
 // prints hex data in traditional 16 column format
 void print_hex(unsigned char* data, uint32_t length) {
 	uint8_t count=0;
@@ -101,6 +254,50 @@ void print_slim_hex(unsigned char* data, uint32_t length) {
 		printf("%02X",*data++);
 	}
 }
+
+// set bit in *p_data @ bit pointer bp
+void bit_set(uint8_t *p_data,uint32_t bp){
+	p_data[bp>>3]|=0x80>>(bp&7);
+}
+
+// clear bit in *p_data @ bit pointer bp
+void bit_clr(uint8_t *p_data,uint32_t bp){
+	p_data[bp>>3]&=~(0x80>>(bp&7));
+}
+
+// get bit in *p_data @ bit pointer bp
+bool bit_get(uint8_t *p_data,uint32_t bp){
+	return (p_data[bp>>3]&(0x80>>(bp&7)))!=0;
+}
+
+// get nibble in data[] @ nibble pointer np
+uint8_t nib_get(uint32_t np) {
+	uint8_t byte=data[np>>1];
+	return (np&1)?LSN(byte):MSN(byte);
+}
+
+// set nibble in data[] @ nibble pointer np
+void nib_set(uint32_t np,uint8_t val) {
+	if(np&1) {
+		data[np>>1]=(data[np>>1]&0xF0)|(val);
+	} else {
+		data[np>>1]=(data[np>>1]&0x0F)|(val<<4);
+	}
+}
+
+// get big-endian int16 in data[] @ byte pointer p
+uint16_t int_get(uint32_t p) {
+	return (data[p+0]<<8)|(data[p+1]<<0);
+}
+
+// set big-endian int16 in data[] @ byte pointer p
+void int_set(uint32_t p,uint32_t val) {
+	data[p+0]=(val>>8)&0x00FF;
+	data[p+1]=(val>>0)&0x00FF;
+}
+
+
+//== ACTUAL FUN STUFF ================================================
 
 // return nof bytes used (excl header) by currently loaded pattern
 uint16_t calc_size() {
@@ -144,47 +341,6 @@ bool find_pattern(uint32_t ptn_id) {
 		}
 	}
 	return false;
-}
-
-// set bit in *p_data @ bit pointer bp
-void bit_set(uint8_t *p_data,uint32_t bp){
-	p_data[bp>>3]|=0x80>>(bp&7);
-}
-
-// clear bit in *p_data @ bit pointer bp
-void bit_clr(uint8_t *p_data,uint32_t bp){
-	p_data[bp>>3]&=~(0x80>>(bp&7));
-}
-
-// get bit in *p_data @ bit pointer bp
-bool bit_get(uint8_t *p_data,uint32_t bp){
-	return (p_data[bp>>3]&(0x80>>(bp&7)))!=0;
-}
-
-// get nibble in data[] @ nibble pointer np
-uint8_t nib_get(uint32_t np) {
-	uint8_t byte=data[np>>1];
-	return (np&1)?LSN(byte):MSN(byte);
-}
-
-// set nibble in data[] @ nibble pointer np
-void nib_set(uint32_t np,uint8_t val) {
-	if(np&1) {
-		data[np>>1]=(data[np>>1]&0xF0)|(val);
-	} else {
-		data[np>>1]=(data[np>>1]&0x0F)|(val<<4);
-	}
-}
-
-// get big-endian int16 in data[] @ byte pointer p
-uint16_t int_get(uint32_t p) {
-	return (data[p+0]<<8)|(data[p+1]<<0);
-}
-
-// set big-endian int16 in data[] @ byte pointer p
-void int_set(uint32_t p,uint32_t val) {
-	data[p+0]=(val>>8)&0x00FF;
-	data[p+1]=(val>>0)&0x00FF;
 }
 
 // decode a pattern from memory and display on screen
@@ -482,7 +638,7 @@ void add_pattern() {
 	  	// TODO: check size, what is machine maximum?
 	  	// if(w>???||h>???) p_img=NULL;
 
-      if(p_img) {	  	
+      if(p_img) {
 
   	  	// display on screen
   	  	for(y=0;y<h;y++) {
@@ -713,6 +869,178 @@ void info() {
 	}
 }
 
+// op mode command executer
+void exec_op(uint8_t cmd[]) {
+	if(cmd[0]==0x08) {
+		printf("fdc mode requested\n");
+	} else {
+		printf("received unsupported op command 0x%02X\n",cmd[0]);
+	}
+}
+
+// fdc mode command executer
+uint16_t exec_fdc(uint8_t cmd[0]) {
+	uint8_t ret[9]="80000000";
+	uint16_t count=0;
+	uint8_t n;
+	if(cmd[0]=='F'||cmd[0]=='G') {
+		// check length code (but format anyways)
+		if(cmd[1]!=5) printf("received [format] with unsupported length code 0x%02X\n",cmd[1]);
+		// format memory
+		memset(data,0x00,80*1024);
+		for(n=0;n<80;n++) memset(&sids[n][0],0x00,12);
+		printf("received 0x%02X, memory erased\n",cmd[0]);
+		// respond ok
+		sprintf(ret,"00000000");
+	} else {
+		if(cmd[1]==0xFF)cmd[1]=0; // physical sector default
+		if(cmd[2]==0xFF)cmd[2]=1; // logical sector default
+		// check sector validity
+		if(cmd[1]<80&&cmd[2]==1) {
+			// respond ok
+			sprintf(ret,"00%02X0000",cmd[1]);
+			// return
+			switch(cmd[0]) {
+				case 'A': case 'R':           count=   1; break;
+				case 'S': case 'B': case 'C': count=  12; break;
+				case 'W': case 'X':           count=1024; break;
+			}
+			printf("received 0x%02X, waiting for data\n",cmd[0]);
+		} else printf("received 0x%02X with bad sector %i:%i\n",cmd[0],cmd[1],cmd[2]);
+	}
+	// send response
+	if(!swrite(ret,8))printf("unable to write to serial port\n");
+	return count;
+}
+
+// fdc mode command+data executer
+void exec_fdc_data(uint8_t *cmd) {
+	uint8_t ret[9];
+	uint8_t *p_data=&cmd[4];
+	uint8_t n;
+	switch(cmd[0]) {
+		case 'A': 					// read sector id
+			if(*p_data=='\x0D') if(!swrite(&sids[cmd[1]][0],12))printf("unable to write to serial port\n");
+			printf("executed 0x%02X\n",cmd[0]);
+			return;
+		case 'R': 					// read sector data
+			if(*p_data=='\x0D') if(!swrite(&data[(uint16_t)(cmd[1])<<10],1024))printf("unable to write to serial port\n");
+			printf("executed 0x%02X\n",cmd[0]);
+			return;
+		case 'S': 					// find sector
+			sprintf(ret,"40000000"); // fail
+			for(n=0;n<80;n++) {
+				if(memcmp(&sids[n][0],p_data,12)==0) {
+					sprintf(ret,"00%02X0000",n); // success
+					break;
+				}
+			}
+			break;
+		case 'B': case 'C': // write sector id
+			memcpy(&sids[cmd[1]][0],p_data,12);
+			sprintf(ret,"00%02X0000",cmd[1]);
+			break;
+		case 'W': case 'X': // write sector data
+			memcpy(&data[(uint16_t)(cmd[1])<<10],p_data,1024);
+			sprintf(ret,"00%02X0000",cmd[1]);
+			break;
+	}
+	printf("executed 0x%02X with response code %s\n",cmd[0],ret);
+	if(!swrite(ret,8))printf("unable to write to serial port\n");
+}
+
+// emulate floppy drive
+void emulate() {
+  uint8_t byte;
+  uint8_t state,csum;
+  uint16_t count;
+ 	uint8_t buf[1028],*p_buf;
+	printf("serial device> ");
+	if(read_cmd()) {
+  	if(sopen(cmd)) {
+  	  puts("serial port open");
+  	  if(!sconfig("9600,N,8,1")) {
+  	    puts("unable to configure serial port - ignoring");
+  	  }
+	    puts("serial port listening... ctrl^C/SIGINT to stop");
+    	// listen for ctrl^C
+    	signal(SIGINT, sigint);
+	    while(!stop) {
+        if(sread(&byte,1)==1) {
+          switch(state) {
+            case 0:
+              if(byte=='Z') state=1;
+              else if(byte!=0x00&&strchr("FGARSBCWX",byte)!=NULL) {
+              	p_buf=buf;
+              	*p_buf++=csum=byte;
+              	buf[1]=buf[2]=0xFF;
+              	state=6;
+              } else printf("received unknown command 0x%02X\n",byte);
+              break;
+            case 1: // opmode second preamble
+              if(byte=='Z') state=2;
+             	else printf("received 0x%02X, expected 0x5A\n",byte);
+             	break;
+            case 2: // opmode block format
+            	p_buf=buf;
+            	*p_buf++=csum=byte;
+            	state=3;
+            	break;
+            case 3: // opmode length of data block
+            	state=(count=byte)?4:5;
+            	csum+=byte;
+            	break;
+            case 4: // opmode data block (ignored)
+          		csum+=byte;
+            	if(--count==0) state=5;
+            	break;
+            case 5: // opmode checksum
+            	if((csum^0xFF)==byte) exec_op(buf);
+            	else printf("received 0x%02X, expected checksum 0x%02X\n",byte,csum^0xFF);
+            	state=0;
+            	break;
+            case 6: // fdc params
+          		if(byte=='\x0D') {
+          			if(*p_buf==0xFF) p_buf--;
+          			count=exec_fdc(buf);
+          			state=count?7:0;
+          			p_buf=&buf[4];
+          		} else if(byte==',') {
+          			if(++p_buf>&buf[3]) {
+          				printf("received too many parameters\n");
+          				state=0;
+          			}
+          		} else if(byte>='0'&&byte<='9') {
+          			if(*p_buf==0xFF)*p_buf=0;
+          			*p_buf*=10;
+          			*p_buf+=byte-'0';
+          		} else if(byte!=' ') {
+          			printf("received unexpected data 0x%02X\n",byte);
+          			state=0;
+          		}
+            	break;
+            case 7: // fdc data
+            	*p_buf++=byte;
+            	if(--count==0) {
+            		exec_fdc_data(buf);
+            		state=0;
+            	}
+            	break;
+          }
+        }
+	    }
+	    stop=false;
+  	  if(sclose()) {
+  	    puts("serial port closed");
+  	  } else  {
+  	    puts("unable to close serial port");
+  	  }
+  	} else {
+  	  puts("unable to open serial port");
+  	}
+  }
+}
+
 // do the nasty
 void main(int argc,char**argv) {
 	uint8_t n;
@@ -763,6 +1091,8 @@ void main(int argc,char**argv) {
 			} else if(strcmp(cmd,"x")==0||strcmp(cmd,"halt")==0) {
 	  		halt=!halt;
 	  		printf("halt on errors: %s\n",halt?"yes":"no");
+			} else if(strcmp(cmd,"e")==0||strcmp(cmd,"emulate")==0) {
+        emulate();	  	  
 			} else {
 				printf("Unrecognized command: %s\n",cmd);
   		  if(halt)exit(1);
