@@ -1,2 +1,103 @@
-Reading and/or building floppy images with patterns for Brother KH-940 knitting machine.
-Will read and write Steve Conklin's floppy emulator files as well as our proprietary disk image format.
+Disk image manager for Brother Electroknit KH-940 knitting machine.
+
+This program is capable of reading and writing:
+* 80k disk image files (our proprietary format)
+* Steve Conklin's Tandy PDD1 floppy drive emulator data folders.
+
+Steve Conklin's emulator was designed for KH-930E,
+but it works equally well with the KH-940.
+
+== FILES =============================================================
+
+src/              Source files for the disk image manager
+sample/           Samples of disk images
+  1.img           Three small designs (actual data from machine)
+  2.img           Two wide/tall designs (actual data from machine)
+  3.img           Seven very different designs (generated file)
+doc/              File format documentation
+  mem_format.txt  Description of the KH-940 memory layout
+  img_format.txt  Description of the disk image formats
+  raw_format.txt  Description of pattern file format
+patterns/         Sample patterns as both bmp and raw
+
+== HOW TO USE ========================================================
+
+Compile and launch knit executable.
+
+Typing ? or help will give
+
+: ?/help      show this
+: r/read      read in data from file
+: w/write     write out data to file
+: f/format    clear all contents
+: a/add       add pattern
+: s/show      display data content
+: e/emulate   emulate floppy
+: i/info      additional info
+: q/quit      end program
+
+read - Reads image on disk to memory
+  The file can be either disk image or folder with emulator files.
+
+  Entering the name of a file will read it as a disk image, ie:
+    filename> sample/1.img
+
+  Entering a folder name, ending with a (back)slash, will read
+  Tandy FDD1 emulator file folder, ie:
+    filename> fddemu/img/
+    
+    
+write - Write memory to image on disk
+  The file can be either disk image or folder with emulator files.
+  See "read" command for more info.
+
+
+format - Clear computer ram contents
+  This will delete everything currently contained in memory and
+  ready the program for input of a new file.
+
+  
+add - Add a pattern to memory
+  The pattern is read from a raw image file, ie:See
+    filename> patterns/903.raw
+
+  See doc\raw_format.txt for a description of the format.
+  
+  
+show - Show patterns contained in memory
+  This will list all available patterns and to into pattern
+  
+  display mode. In this mode you get the following promt:
+    pattern #>
+  instead of the regular one.
+  
+  To exit this mode enter d, done or simply enter a blank line.
+  
+  While in this mode, enter the pattern number of an available
+  pattern to print out a graphical representation of the
+  pattern as well as it's binary data representation.
+  
+  
+info - Shows additional non-pattern information
+  This will display all important fields in the currently
+  loaded file and run a verification suite against all of
+  the know values.
+  
+  Verifications are done against the most common and verified
+  to work values that have been downloaded from the machine.
+  
+  Therefore it MAY give FAIL on "write pointer" entries and/or
+  the "loaded head" entry for some files when entered and
+  loaded from knitting machine as the true meaning of these
+  parameters is not exactly known.
+  
+  Additionally, MOST parameters WILL give FAIL on a blank
+  formatted file, regardless if done via device or this
+  program.
+  
+  For a file generated using this program all parameters
+  should give OK before attempting download.
+  
+
+quit - Self explanatory
+  Go outside and enjoy the weather

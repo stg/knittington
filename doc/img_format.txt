@@ -1,0 +1,38 @@
+== BROTHER ELECTROKNIT KH940 PROPRIETARY FLOPPY IMAGE FORMAT =========
+
+Offset    Bytes        Content
+0x000000  1024         Sector  0 - data
+0x000400  1024         Sector  1 - data
+0x000800  1024         Sector  2 - data
+  ...........................
+  ...........................
+0x013C00  1024         Sector 79 - data
+
+0x014000    12         Sector  0 - data
+0x01400C    12         Sector  1 - data
+0x014018    12         Sector  2 - data
+  ...........................
+  ...........................
+0x0143B4    12         Sector 79 - data
+
+Actual data in sectors 0 to 31 is described in mem_format.txt
+
+
+== BROTHER ELECTROKNIT TANDY PDD1 FLOPPY EMULATOR DATA FOLDER ========
+
+File      Bytes        Content
+00.dat    1024         Sector  0 - id
+01.dat    1024         Sector  1 - id
+02.dat    1024         Sector  2 - id
+  ...........................
+  ...........................
+79.dat    1024         Sector 79 - id
+
+00.id       12         Sector  0 - id
+01.id       12         Sector  1 - id
+02.id       12         Sector  2 - id
+  ...........................
+  ...........................
+79.id       12         Sector 79 - id
+
+Actual data in sectors 0 to 31 is described in mem_format.txt
