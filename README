@@ -35,6 +35,7 @@ Typing ? or help will give
 : e/emulate   emulate floppy
 : i/info      additional info
 : q/quit      end program
+: x/halt      halt on errors
 
 read - Reads image on disk to memory
   The file can be either disk image or folder with emulator files.
@@ -101,3 +102,24 @@ info - Shows additional non-pattern information
 
 quit - Self explanatory
   Go outside and enjoy the weather
+  
+halt - Enable/disable halt on errors
+  Enabling halt on errors is good for command line execution
+  
+== BATCH EXECUTION ===================================================
+
+All commands can be executed from command line, for example:
+
+knit x a ptn/blocks.raw a ptn/inca.raw a ptn/text.raw w out/img/ q
+
+Will do the following:
+
+* Enable halt on error
+* Add ptn/blocks.raw as #901
+* Add ptn/inca.raw as #902
+* Add ptn/text.raw as #903
+* Write python floppy emulator folder out/img/
+* Quit
+
+In addition commands can also be piped in, or typed manually in
+succession at any prompt within the program.

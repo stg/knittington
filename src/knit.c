@@ -35,6 +35,9 @@ static uint8_t sids[80][12];
 static char cmds[8192]={0};
 static char cmd[256];
 
+// flags
+static bool halt=false;
+
 // command input routine that handles several
 // commands in one input as well as strings
 bool read_cmd() {
@@ -117,7 +120,10 @@ bool decode_header(uint8_t index) {
 		ptn.width  =LSN(hdr[3])*100;
 		ptn.width +=MSN(hdr[4])*10; 
 		ptn.width +=LSN(hdr[4])*1;
-		if(MSN(hdr[5])!=0) printf("bad data @ %i\n", index*7+5);
+		if(MSN(hdr[5])!=0) {
+		  printf("encountered bad data @ %04X\n", index*7+5);
+		  if(halt)exit(1);
+		}
 		ptn.id =LSN(hdr[5])*100;
 		ptn.id+=MSN(hdr[6])*10; 
 		ptn.id+=LSN(hdr[6])*1;
@@ -258,9 +264,11 @@ void display() {
 				decode_pattern();
 			} else {
 				printf("pattern number %i does not exist\n",ptn_id);
+        if(halt)exit(1);
 			}
 		} else {
 			printf("need done or number between 901 and 998\n");
+		  if(halt)exit(1);
 		}
 	}
 }
@@ -290,6 +298,7 @@ void writeout() {
 			  	fclose(f);
 				} else {
 				 	printf("unable to open file %s\n",fn);	
+    		  if(halt)exit(1);
 				 	break;
 				}
 	  		//read sector
@@ -301,6 +310,7 @@ void writeout() {
 			  	fclose(f);
 				} else {
 				 	printf("unable to open file %s\n",fn);	
+    		  if(halt)exit(1);
 				 	break;
 				}
 	  	}
@@ -316,6 +326,7 @@ void writeout() {
 				puts("wrote 80k disk image");
 			} else {
 			  printf("unable to open file %s\n",cmd);
+  		  if(halt)exit(1);
 			}
 		}
 	}
@@ -346,6 +357,7 @@ void readin() {
 			  	fclose(f);
 				} else {
 				 	printf("unable to open file %s\n",fn);	
+    		  if(halt)exit(1);
 				 	break;
 				}
 	  		//read sector
@@ -357,6 +369,7 @@ void readin() {
 			  	fclose(f);
 				} else {
 				 	printf("unable to open file %s\n",fn);	
+    		  if(halt)exit(1);
 				 	break;
 				}
 	  	}
@@ -367,6 +380,7 @@ void readin() {
 		  	fseek(f,0,SEEK_END);
 		  	if(ftell(f)!=81920+960&&ftell(f)!=32768) {
 		  		printf("bad file size %s\n",cmd);
+    		  if(halt)exit(1);
 		  	} else {
 		  		if(ftell(f)==32768) {
 			  		fseek(f,0,0);
@@ -389,6 +403,7 @@ void readin() {
 		  	fclose(f);
 		  } else {
 		  	printf("unable to open file %s\n",cmd);
+  		  if(halt)exit(1);
 		  }
 		}
 	}
@@ -577,15 +592,19 @@ void add_pattern() {
     			  printf("added #%i is %ix%i @%04X-0x%04X\n",ptn.id,ptn.width,ptn.height,ptn.offset,ptn.offset+calc_size()-1);
     			} else {
     			  puts("something bad happened");
+      		  if(halt)exit(1);
     			}
     		} else {
     		  puts("not enough memory to store pattern");
+     		  if(halt)exit(1);
     		}
   		} else {
   		  puts("image does not have the correct format");
+  		  if(halt)exit(1);
   		}
 	  } else {
 	  	printf("unable to open file %s\n",cmd);
+		  if(halt)exit(1);
 	  }
 	}
 }
@@ -725,6 +744,7 @@ void main(int argc,char**argv) {
 				puts("e/emulate   emulate floppy");
 				puts("i/info      additional info");
 				puts("q/quit      end program");
+				puts("x/halt      halt on errors");
 			} else if(strcmp(cmd,"quit")==0||strcmp(cmd,"q")==0) {
 				puts("See you!");
 				exit(0);
@@ -740,8 +760,12 @@ void main(int argc,char**argv) {
 	  		add_pattern();
 			} else if(strcmp(cmd,"i")==0||strcmp(cmd,"info")==0) {
 	  		info();
+			} else if(strcmp(cmd,"x")==0||strcmp(cmd,"halt")==0) {
+	  		halt=!halt;
+	  		printf("halt on errors: %s\n",halt?"yes":"no");
 			} else {
 				printf("Unrecognized command: %s\n",cmd);
+  		  if(halt)exit(1);
 			}
 		}
 	}
