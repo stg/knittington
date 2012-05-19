@@ -242,10 +242,10 @@ void print_hex(unsigned char* data, uint32_t length) {
 		if(count) {
 			putch(' ');
 		} else {
-			puts("");
+			printf("\n");
 		}
 	}
-	if(count) puts("");
+	if(count) printf("\n");
 }
 
 // prints hex data in slim format
@@ -363,7 +363,7 @@ void decode_pattern() {
   	for(x=0;x<ptn.width;x+=4) {
   		printf("%1X",nib_get(nptr-(x>>2)));
   	}
-  	puts("");
+  	printf("\n");
   	nptr+=stride;
   }
 }
@@ -398,7 +398,7 @@ void format() {
 	data[0x7F10]=0x7F; // unknown pointer
 	data[0x7F11]=0xF9;
 	data[0x7FEA]=0x10; // 1xxx BCD (000=no pattern)
-	puts("memory formatted");
+	printf("memory initialized\n");
 }
 
 // display patterns contained in memory
@@ -470,7 +470,7 @@ void writeout() {
 				 	break;
 				}
 	  	}
-			if(n==80) puts("wrote 80x1k dat+id");
+			if(n==80) printf("wrote 80x1k dat+id\n");
 
 		} else {
 			f=fopen(cmd,"wb");
@@ -479,7 +479,7 @@ void writeout() {
 	  		for(n=0;n<80;n++) {
 	  			fwrite(&sids[n][0],1,12,f);
 	  		}
-				puts("wrote 80k disk image");
+				printf("wrote 80k disk image\n");
 			} else {
 			  printf("unable to open file %s\n",cmd);
   		  if(halt)exit(1);
@@ -529,7 +529,7 @@ void readin() {
 				 	break;
 				}
 	  	}
-			if(n==80) puts("read 80x1k dat+id");
+			if(n==80) printf("read 80x1k dat+id\n");
 	  } else {
 		  f=fopen(cmd,"rb");
 		  if(f) {
@@ -546,14 +546,14 @@ void readin() {
 			  			memset(&sids[n][0],0,12);
 			  			sids[n][0]=n<32?1:0;
 			  		}
-			  		puts("read 32k blob");
+			  		printf("read 32k blob\n");
 		  		} else {
 			  		fseek(f,0,0);
 			  		fread(data,1,81920,f);
 			  		for(n=0;n<80;n++) {
 			  			fread(&sids[n][0],1,12,f);
 			  		}
-			  		puts("read 80k disk image");
+			  		printf("read 80k disk image\n");
 		  		}
 		  	}
 		  	fclose(f);
@@ -645,7 +645,7 @@ void add_pattern() {
   	  		for(x=0;x<w;x++) {
   	  			putch(sample(p_img,w,x,y)?'X':'-');
   	  		}
-  	  		puts("");
+  	  		printf("\n");
   	  	}
   
         // remember bottom offset
@@ -747,15 +747,15 @@ void add_pattern() {
     			if(decode_header(hdr_index-1)) {
     			  printf("added #%i is %ix%i @%04X-0x%04X\n",ptn.id,ptn.width,ptn.height,ptn.offset,ptn.offset+calc_size()-1);
     			} else {
-    			  puts("something bad happened");
+    			  printf("something bad happened\n");
       		  if(halt)exit(1);
     			}
     		} else {
-    		  puts("not enough memory to store pattern");
+    		  printf("not enough memory to store pattern\n");
      		  if(halt)exit(1);
     		}
   		} else {
-  		  puts("image does not have the correct format");
+  		  printf("image does not have the correct format\n");
   		  if(halt)exit(1);
   		}
 	  } else {
@@ -825,12 +825,12 @@ void info() {
 	// Just print AREA1 - don't know how to check
 	printf("AREA1   ");
 	print_slim_hex(&data[0x7EE7],25);
-	puts("");
+	printf("\n");
 
 	// Just print AREA2 - don't know how to check
 	printf("AREA2   ");
 	print_slim_hex(&data[0x7F17],25);
-	puts("");
+	printf("\n");
 
 	// Check AREA3
 	for(addr=0x7F30;addr<0x7F30+186;addr++) if(data[addr]!=00) break;
@@ -850,7 +850,7 @@ void info() {
 		print_hex(&data[0x7FEC],19);
 	}
 	
-	puts("");
+	printf("\n");
 	
 	// Check FINHDR
 	printf("FINHDR  ");
@@ -872,9 +872,25 @@ void info() {
 // op mode command executer
 void exec_op(uint8_t cmd[]) {
 	if(cmd[0]==0x08) {
-		printf("fdc mode requested\n");
+		printf("[op mode] recv 0x08 [fdc mode  ]\n");
 	} else {
-		printf("received unsupported op command 0x%02X\n",cmd[0]);
+		printf("[op mode] recv 0x%02X bad/unsupported command\n",cmd[0]);
+	}
+}
+
+// serial write with error printing
+int32_t eswrite(void* p_write,uint16_t i_write) {
+	if(swrite(p_write,i_write)!=i_write) printf("unable to write to serial port\n");
+}
+
+char* fdc_name(uint8_t cmd) {
+	switch(cmd) {
+		case 'A':           return "read id   ";
+		case 'R':           return "read sect ";
+		case 'S':           return "find sect ";
+		case 'B': case 'C': return "write id  ";
+		case 'W': case 'X': return "write sect";
+		default: return "?";
 	}
 }
 
@@ -885,13 +901,13 @@ uint16_t exec_fdc(uint8_t cmd[0]) {
 	uint8_t n;
 	if(cmd[0]=='F'||cmd[0]=='G') {
 		// check length code (but format anyways)
-		if(cmd[1]!=5) printf("received [format] with unsupported length code 0x%02X\n",cmd[1]);
+		if(cmd[1]!=5) printf("recv %02X [format    ] unsupported length code 0x%02X\n",cmd[0],cmd[1]);
 		// format memory
 		memset(data,0x00,80*1024);
 		for(n=0;n<80;n++) memset(&sids[n][0],0x00,12);
-		printf("received 0x%02X, memory erased\n",cmd[0]);
 		// respond ok
 		sprintf(ret,"00000000");
+		printf("[fdc emu] exec 0x%02X [format    ] resp: %s\n",cmd[0],ret);
 	} else {
 		if(cmd[1]==0xFF)cmd[1]=0; // physical sector default
 		if(cmd[2]==0xFF)cmd[2]=1; // logical sector default
@@ -905,11 +921,11 @@ uint16_t exec_fdc(uint8_t cmd[0]) {
 				case 'S': case 'B': case 'C': count=  12; break;
 				case 'W': case 'X':           count=1024; break;
 			}
-			printf("received 0x%02X, waiting for data\n",cmd[0]);
-		} else printf("received 0x%02X with bad sector %i:%i\n",cmd[0],cmd[1],cmd[2]);
+			printf("[fdc emu] recv 0x%02X [%s] resp: %s expect %i bytes\n",cmd[0],fdc_name(cmd[0]),ret,count);
+		} else printf("[fdc emu] recv 0x%02X [%s] resp: %s bad sector %i\\%i\n",cmd[0],fdc_name(cmd[0]),ret,cmd[1],cmd[2]);
 	}
 	// send response
-	if(!swrite(ret,8))printf("unable to write to serial port\n");
+	eswrite(ret,8);
 	return count;
 }
 
@@ -920,12 +936,12 @@ void exec_fdc_data(uint8_t *cmd) {
 	uint8_t n;
 	switch(cmd[0]) {
 		case 'A': 					// read sector id
-			if(*p_data=='\x0D') if(!swrite(&sids[cmd[1]][0],12))printf("unable to write to serial port\n");
-			printf("executed 0x%02X\n",cmd[0]);
+			if(*p_data=='\x0D') eswrite(&sids[cmd[1]][0],12);
+			printf("[fdc emu] exec 0x%02X [%s]\n",cmd[0],fdc_name(cmd[0]));
 			return;
 		case 'R': 					// read sector data
-			if(*p_data=='\x0D') if(!swrite(&data[(uint16_t)(cmd[1])<<10],1024))printf("unable to write to serial port\n");
-			printf("executed 0x%02X\n",cmd[0]);
+			if(*p_data=='\x0D') eswrite(&data[(uint16_t)(cmd[1])<<10],1024);
+			printf("[fdc emu] exec 0x%02X [%s]\n",cmd[0],fdc_name(cmd[0]));
 			return;
 		case 'S': 					// find sector
 			sprintf(ret,"40000000"); // fail
@@ -945,8 +961,8 @@ void exec_fdc_data(uint8_t *cmd) {
 			sprintf(ret,"00%02X0000",cmd[1]);
 			break;
 	}
-	printf("executed 0x%02X with response code %s\n",cmd[0],ret);
-	if(!swrite(ret,8))printf("unable to write to serial port\n");
+	printf("[fdc emu] exec 0x%02X [%s] resp: %s\n",cmd[0],fdc_name(cmd[0]),ret);
+	eswrite(ret,8);
 }
 
 // emulate floppy drive
@@ -958,11 +974,11 @@ void emulate() {
 	printf("serial device> ");
 	if(read_cmd()) {
   	if(sopen(cmd)) {
-  	  puts("serial port open");
+  	  printf("serial port open\n");
   	  if(!sconfig("9600,N,8,1")) {
-  	    puts("unable to configure serial port - ignoring");
+  	    printf("unable to configure serial port - ignoring\n");
   	  }
-	    puts("serial port listening... ctrl^C/SIGINT to stop");
+	    printf("serial port listening... ctrl^C/SIGINT to stop\n");
     	// listen for ctrl^C
     	signal(SIGINT, sigint);
 	    while(!stop) {
@@ -975,11 +991,11 @@ void emulate() {
               	*p_buf++=csum=byte;
               	buf[1]=buf[2]=0xFF;
               	state=6;
-              } else printf("received unknown command 0x%02X\n",byte);
+              } else printf("[general] recv 0x%02X bad/unsupported command\n",byte);
               break;
             case 1: // opmode second preamble
               if(byte=='Z') state=2;
-             	else printf("received 0x%02X, expected 0x5A\n",byte);
+             	else printf("[op mode] recv 0x%02X expected preamble 0x5A\n",byte);
              	break;
             case 2: // opmode block format
             	p_buf=buf;
@@ -996,7 +1012,7 @@ void emulate() {
             	break;
             case 5: // opmode checksum
             	if((csum^0xFF)==byte) exec_op(buf);
-            	else printf("received 0x%02X, expected checksum 0x%02X\n",byte,csum^0xFF);
+            	else printf("[op mode] recv 0x%02X expected checksum 0x%02X\n",byte,csum^0xFF);
             	state=0;
             	break;
             case 6: // fdc params
@@ -1007,7 +1023,7 @@ void emulate() {
           			p_buf=&buf[4];
           		} else if(byte==',') {
           			if(++p_buf>&buf[3]) {
-          				printf("received too many parameters\n");
+          				printf("[fdc emu] recv too many parameters\n");
           				state=0;
           			}
           		} else if(byte>='0'&&byte<='9') {
@@ -1015,7 +1031,7 @@ void emulate() {
           			*p_buf*=10;
           			*p_buf+=byte-'0';
           		} else if(byte!=' ') {
-          			printf("received unexpected data 0x%02X\n",byte);
+          			printf("[fdc emu] recv 0x%02X expected parameter data\n",byte);
           			state=0;
           		}
             	break;
@@ -1031,12 +1047,12 @@ void emulate() {
 	    }
 	    stop=false;
   	  if(sclose()) {
-  	    puts("serial port closed");
+  	    printf("serial port closed\n");
   	  } else  {
-  	    puts("unable to close serial port");
+  	    printf("unable to close serial port\n");
   	  }
   	} else {
-  	  puts("unable to open serial port");
+  	  printf("unable to open serial port\n");
   	}
   }
 }
@@ -1063,18 +1079,18 @@ void main(int argc,char**argv) {
 		printf("> ");
 		if(read_cmd(cmd,sizeof(cmd))) {
 			if(strcmp(cmd,"help")==0||strcmp(cmd,"?")==0) {
-				puts("?/help      show this");
-				puts("r/read      read in data from file");
-				puts("w/write     write out data to file");
-				puts("f/format    clear all contents");
-				puts("a/add       add pattern");
-				puts("s/show      display data content");
-				puts("e/emulate   emulate floppy");
-				puts("i/info      additional info");
-				puts("q/quit      end program");
-				puts("x/halt      halt on errors");
+				printf("?/help      show this\n");
+				printf("r/read      read in data from file\n");
+				printf("w/write     write out data to file\n");
+				printf("f/format    clear all contents\n");
+				printf("a/add       add pattern\n");
+				printf("s/show      display data content\n");
+				printf("e/emulate   emulate floppy\n");
+				printf("i/info      additional info\n");
+				printf("q/quit      end program\n");
+				printf("x/halt      halt on errors\n");
 			} else if(strcmp(cmd,"quit")==0||strcmp(cmd,"q")==0) {
-				puts("See you!");
+				printf("See you!\n");
 				exit(0);
 			} else if(strcmp(cmd,"r")==0||strcmp(cmd,"read")==0) {
 				readin();
