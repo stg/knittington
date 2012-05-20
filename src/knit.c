@@ -188,12 +188,19 @@ bool sclose() {
 
 // command input routine that handles several
 // commands in one input as well as strings
-bool read_cmd() {
+bool read_cmd(char *fail) {
 	char *ret;
 	char *p_src,*p_dst;
+	uint16_t len;
 	bool out=false;
 	if(strlen(cmds)==0) {
-		gets(cmds); // TODO: gets is unsafe (may give buffer overflow) - replace!
+		if(fgets(cmds,sizeof(cmds),stdin)==NULL) {
+		  strcpy(cmds,fail);
+		  out=true;
+		} else {
+		  len=strlen(cmds);
+		  if(cmds[len-1]=='\n') cmds[len-1]=0;
+		}
 		//count leading spaces
 		p_src=cmds;
 		while(*p_src==' ') p_src++;
@@ -240,7 +247,7 @@ void print_hex(unsigned char* data, uint32_t length) {
 		printf("%02X",*data++);
 		count=(count+1)&0x0F;
 		if(count) {
-			putch(' ');
+			putchar(' ');
 		} else {
 			printf("\n");
 		}
@@ -357,7 +364,7 @@ void decode_pattern() {
   // print out pattern
   for(y=0;y<ptn.height;y++) {
   	for(x=0;x<ptn.width;x++) {
-  		putch((nib_get(nptr-(x>>2))&(1<<(x&3)))?'X':'-');
+  		putchar((nib_get(nptr-(x>>2))&(1<<(x&3)))?'X':'-');
   	}
   	printf(" 0x");
   	for(x=0;x<ptn.width;x+=4) {
@@ -412,7 +419,7 @@ void display() {
 	}
 	while(1) {
 		printf("pattern #> ");
-		if(!read_cmd()) break;
+		if(!read_cmd("")) break;
 		if(strcmp(cmd,"d")==0||strcmp(cmd,"done")==0) break;
 		ptn_id=str_to_id(cmd);
 		if(ptn_id) {
@@ -436,7 +443,7 @@ void writeout() {
 	uint32_t temp;
 	FILE *f;
 	printf("filename> ");
-	if(read_cmd()) {
+	if(read_cmd("")) {
 	  temp=strlen(cmd)-1;
 	  if(cmd[temp]=='\\'||cmd[temp]=='/') {
 
@@ -496,7 +503,7 @@ void readin() {
 	uint32_t temp;
 	FILE *f;
 	printf("filename> ");
-	if(read_cmd()) {
+	if(read_cmd("")) {
 	  temp=strlen(cmd)-1;
 	  if(cmd[temp]=='\\'||cmd[temp]=='/') {
 	  	//folder
@@ -627,7 +634,7 @@ void add_pattern() {
 	
 	FILE *f;
 	printf("filename> ");
-	if(read_cmd()) {
+	if(read_cmd("")) {
 	  f=fopen(cmd,"rb");
 	  if(f) {
 
@@ -643,7 +650,7 @@ void add_pattern() {
   	  	// display on screen
   	  	for(y=0;y<h;y++) {
   	  		for(x=0;x<w;x++) {
-  	  			putch(sample(p_img,w,x,y)?'X':'-');
+  	  			putchar(sample(p_img,w,x,y)?'X':'-');
   	  		}
   	  		printf("\n");
   	  	}
@@ -971,11 +978,12 @@ void emulate() {
   uint8_t state,csum;
   uint16_t count;
  	uint8_t buf[1028],*p_buf;
+ 	char fmt[]="9600,N,8,1";
 	printf("serial device> ");
-	if(read_cmd()) {
+	if(read_cmd("")) {
   	if(sopen(cmd)) {
   	  printf("serial port open\n");
-  	  if(!sconfig("9600,N,8,1")) {
+  	  if(!sconfig(fmt)) {
   	    printf("unable to configure serial port - ignoring\n");
   	  }
 	    printf("serial port listening... ctrl^C/SIGINT to stop\n");
@@ -1077,7 +1085,7 @@ void main(int argc,char**argv) {
 	format();
 	while(1) {
 		printf("> ");
-		if(read_cmd(cmd,sizeof(cmd))) {
+		if(read_cmd("q")) {
 			if(strcmp(cmd,"help")==0||strcmp(cmd,"?")==0) {
 				printf("?/help      show this\n");
 				printf("r/read      read in data from file\n");
