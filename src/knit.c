@@ -106,11 +106,11 @@ bool sclose() {
 #include <unistd.h>
 #include <fcntl.h>
 
-static int h_serial, fd;
+static int h_serial;
 
-// device has form "/dev/somedev"
+// device has form "/dev/ttySn"
 bool sopen(char* device) {
-	int h_serial=open(device,O_RDWR|O_NOCTTY|O_NDELAY);
+	h_serial=open(device,O_RDWR|O_NOCTTY|O_NDELAY);
 	return h_serial>=0;
 }
 
@@ -135,7 +135,8 @@ bool sconfig(char* fmt) {
 	switch(atoi(argv[0])) {
 		case   1200: cfsetispeed(&options,B1200  ); cfsetospeed(&options,B1200  ); break;
 		case   2400: cfsetispeed(&options,B2400  ); cfsetospeed(&options,B2400  ); break;
-		case   4800: cfsetispeed(&options,B9600  ); cfsetospeed(&options,B9600  ); break;
+		case   4800: cfsetispeed(&options,B4800  ); cfsetospeed(&options,B4800  ); break;
+		case   9600: cfsetispeed(&options,B9600  ); cfsetospeed(&options,B9600  ); break;
 		case  19200: cfsetispeed(&options,B19200 ); cfsetospeed(&options,B19200 ); break;
 		case  38400: cfsetispeed(&options,B38400 ); cfsetospeed(&options,B38400 ); break;
 		case  57600: cfsetispeed(&options,B57600 ); cfsetospeed(&options,B57600 ); break;
@@ -145,28 +146,28 @@ bool sconfig(char* fmt) {
 	// configure parity
 	switch(argv[1][0]) {
 		case 'n': case 'N': options.c_cflag&=~PARENB;                           break;
-		case 'o': case 'O': options.c_cflag|=~PARENB; options.c_cflag|= PARODD; break;
-		case 'e': case 'E': options.c_cflag|=~PARENB; options.c_cflag&=~PARODD; break;
+		case 'o': case 'O': options.c_cflag|= PARENB; options.c_cflag|= PARODD; break;
+		case 'e': case 'E': options.c_cflag|= PARENB; options.c_cflag&=~PARODD; break;
 		default: return false;
 	}
 	// configure data bits
 	options.c_cflag&=~CSIZE;
 	switch(argv[2][0]) {
-		case '8': options.c_cflag|=CS8; break;
-		case '7': options.c_cflag|=CS7; break;
+		case '8': options.c_cflag&=~CSIZE; options.c_cflag|=CS8; break;
+		case '7': options.c_cflag&=~CSIZE; options.c_cflag|=CS7; break;
 		default: return false;
 	}
 	// configure stop bits
-	switch(argv[2][0]) {
+	switch(argv[3][0]) {
 		case '1': options.c_cflag&=~CSTOPB; break;
 		case '2': options.c_cflag|= CSTOPB; break;
 		default: return false;
 	}	
 	// configure timeouts
 	options.c_cc[VMIN]=0;
-	options.c_cc[VTIME]=1; // wait for requested data 1/10 seconds
+	options.c_cc[VTIME]=1;
 	options.c_cflag|=CLOCAL|CREAD;
-	return tcsetattr(fd,TCSANOW,&options)==0;
+	return tcsetattr(h_serial,TCSANOW,&options)==0;
 }
 
 int32_t sread(void* p_read,uint16_t i_read) {
@@ -986,7 +987,7 @@ void emulate() {
   	  if(!sconfig(fmt)) {
   	    printf("unable to configure serial port - ignoring\n");
   	  }
-	    printf("serial port listening... ctrl^C/SIGINT to stop\n");
+	    printf("serial port listening... (ctrl)^C/SIGINT to stop\n");
     	// listen for ctrl^C
     	signal(SIGINT, sigint);
 	    while(!stop) {
@@ -1024,7 +1025,7 @@ void emulate() {
             	state=0;
             	break;
             case 6: // fdc params
-          		if(byte=='\x0D') {
+          		if(byte=='\x0D'||byte=='\x0A') {
           			if(*p_buf==0xFF) p_buf--;
           			count=exec_fdc(buf);
           			state=count?7:0;
