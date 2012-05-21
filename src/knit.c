@@ -640,7 +640,7 @@ void *image_read(FILE *f,uint16_t *w,uint16_t *h) {
 }
 
 // add pattern to memory
-void add_pattern(uint8_t *p_img,uint16_t w,uint16_t h) {
+bool add_pattern(uint8_t *p_img,uint16_t w,uint16_t h) {
 	uint8_t   n;
 	uint16_t  ptn_id;
 	uint32_t  temp;
@@ -768,6 +768,7 @@ void add_pattern(uint8_t *p_img,uint16_t w,uint16_t h) {
 		// check/decode written data, print out info
 		if(decode_header(hdr_index-1)) {
 		  printf("added #%i is %ix%i @%04X-0x%04X\n",ptn.id,ptn.width,ptn.height,ptn.offset,ptn.offset+calc_size()-1);
+		  return true;
 		} else {
 		  printf("something bad happened\n");
 		  if(halt)exit(1);
@@ -776,6 +777,12 @@ void add_pattern(uint8_t *p_img,uint16_t w,uint16_t h) {
 	  printf("not enough memory to store pattern\n");
 	  if(halt)exit(1);
 	}
+	return false;
+}
+
+// add raw file array
+bool add_raw(uint8_t p_img[]) {
+	return add_pattern(&p_img[4],(p_img[0]<<8)|p_img[1],(p_img[2]<<8)|p_img[3]);
 }
 
 // add pattern from file
