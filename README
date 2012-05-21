@@ -4,9 +4,6 @@ This program is capable of reading and writing:
 * 80k disk image files (our proprietary format)
 * Steve Conklin's Tandy PDD1 floppy drive emulator data folders.
 
-Steve Conklin's emulator was designed for KH-930E,
-but it works equally well with the KH-940.
-
 == FILES =============================================================
 
 src/              Source files for the disk image manager
@@ -67,9 +64,10 @@ add - Add a pattern to memory
   
 show - Show patterns contained in memory
   This will list all available patterns and to into pattern
-  
   display mode. In this mode you get the following promt:
+  
     pattern #>
+    
   instead of the regular one.
   
   To exit this mode enter d, done or simply enter a blank line.
@@ -77,6 +75,29 @@ show - Show patterns contained in memory
   While in this mode, enter the pattern number of an available
   pattern to print out a graphical representation of the
   pattern as well as it's binary data representation.
+
+
+emulate - Start floppy emulator
+  
+  This will ask for a serial device and the format is different
+  depending on your system. For linux-flavors, it will usually
+  look like:
+  serial device> /dev/ttyS0
+  
+  For windows, it will look something like:
+  serial device> COM1
+  
+  After entering a serial device, the program will go into 
+  floppy emulation mode.
+  
+  You can exit this mode by sending a SIGINT, which is usually
+  Ctrl+C on most systems.
+  
+  While in this mode, you can use the knitting machine to save
+  or load data into program memory, which can first be build
+  using add or read using read.
+  
+  After saving from the machine you can keep it with write.
   
   
 info - Shows additional non-pattern information
@@ -88,9 +109,11 @@ info - Shows additional non-pattern information
   to work values that have been downloaded from the machine.
   
   Therefore it MAY give FAIL on "write pointer" entries and/or
-  the "loaded head" entry for some files when entered and
-  loaded from knitting machine as the true meaning of these
-  parameters is not exactly known.
+  the "loaded head" entry for some files because the machine
+  sometimes inserts a 0x00 byte between patterns which causes
+  a mismatch of 1 for these values. Exactly when/why this is
+  done is uncertain, but it is not needed when writing patterns,
+  so it may actually be a bug in the machine.
   
   Additionally, MOST parameters WILL give FAIL on a blank
   formatted file, regardless if done via device or this

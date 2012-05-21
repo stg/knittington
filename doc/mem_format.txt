@@ -13,7 +13,7 @@ dump of all contents in the external RAM memory of the machine.
              0x7EDF = 0x7FFF - 0x0120
 
 ** When writing about alternatives, it means that contents is not
-     entirely classified, and could be any of two alternatives.
+     entirely classified, and could be any of several alternatives.
    Further investigation was not warranted because knowing the
      exact specification is not necessary to build a functional
      disk image.
@@ -25,6 +25,10 @@ Offset    Bytes        Content
   Contains array of *up to* 98 pattern descriptors.
   Unused items are filled with 0x55 except for FINHDR which
     also needs XX=0 and PTN_NUM=next unused id.
+    
+  Patterns are not always stored in linear order, ie the list
+  may be 901, 904, 902, 903. This happens when patterns are
+  deleted in the machine.
 
        Content         Address (Offset* from header)
   /---------------\ <- 0x0000
@@ -113,7 +117,7 @@ Offset    Bytes        Content
     Each row of the pattern may have a number assigned to it but
     it is not significant for operation, consider it meta-data.
 
-    Each number requires one nibble for every row, ie HEIGHT/2.
+    Each such number requires one nibble for every row, ie HEIGHT/2.
     This is rounded to the nearest byte, hence a pattern
     containing 7 rows will have 4 bytes of MEMO data.
     A pattern with 10 rows will have 5 bytes of MEMO data.
@@ -193,7 +197,7 @@ Offset    Bytes        Content
   Contains unidentified bit pattern.
   Best guess is working memory for pattern input.
 
-  Content with patterns: 5 repetitions of 5 byte pattern
+  Content with patterns: several repetitions of an n-byte pattern
   Content after format:  0x55
   Write as:              0x00
 
@@ -258,7 +262,7 @@ Offset    Bytes        Content
   Contains unidentified bit pattern.
   Best guess is working memory for pattern input.
 
-  Content with patterns: 5 repetitions of 5 byte pattern
+  Content with patterns: several repetitions of an n-byte pattern
   Content after format:  0x55
   Write as:              0x00
 
