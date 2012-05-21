@@ -640,12 +640,11 @@ void *image_read(FILE *f,uint16_t *w,uint16_t *h) {
 }
 
 // add pattern to memory
-void add_pattern() {
+void add_pattern(uint8_t *p_img,uint16_t w,uint16_t h) {
 	uint8_t   n;
 	uint16_t  ptn_id;
 	uint32_t  temp;
-	uint16_t  w,h,x,y;
-	uint8_t  *p_img;
+	uint16_t  x,y;
 	uint8_t  *p_data;
 	uint16_t  b_stride;
 	uint32_t  bp_last,bp_line,bp_this;
@@ -662,7 +661,127 @@ void add_pattern() {
 			if(ptn.id>=ptn_id) ptn_id=ptn.id+1;
 	  }
 	}
+
+	// display on screen
+	for(y=0;y<h;y++) {
+		for(x=0;x<w;x++) {
+			putchar(sample(p_img,w,x,y)?'X':'-');
+		}
+		printf("\n");
+	}
+
+  // remember bottom offset
+	o_bottom=int_get(0x7F00);
+
+  // calculate bytes needed to store pattern
+	memo_bytes=(h+1)>>1;
+	data_bytes=((((w+3)>>2)*h)+1)>>1;
 	
+	// Check memory availability (should be 0x2AE, but leave some to be sure)
+	if(0x7FFF-(o_bottom+memo_bytes+data_bytes)>=0x02B0) {
+
+  	// make memo data
+  	p_data=malloc(memo_bytes);
+  	memset(p_data,0,memo_bytes);
+  	// set memo data
+  	memset(p_data,0,memo_bytes);
+  	// insert into memory @ PATTERN_PTR1
+  	memcpy(&p_track[0x8000-int_get(0x7F00)-memo_bytes],p_data,memo_bytes);
+  	// update PATTERN_PTR1
+  	int_set(0x7F00,int_get(0x7F00)+memo_bytes);
+    // free memo data
+    free(p_data);	  	
+  	
+  	// make pattern data
+  	p_data=malloc(data_bytes);
+  	memset(p_data,0,data_bytes);
+  	// stride (bits per row)
+  	b_stride=(w+3)&~3;
+  	// calculate index of last bit in pattern
+  	bp_last=(data_bytes<<3)-1;
+		// set pattern data
+		for(y=0;y<h;y++) {
+      // calculate index of last bit on line
+      bp_line=bp_last-b_stride*(h-y-1);
+      for(x=0;x<w;x++) {
+        // calculate index of the current bit
+        bp_this=bp_line-x;
+        // sample image
+        if(sample(p_img,w,x,y)) bit_set(p_data,bp_this);
+      }
+    }
+  	// insert into memory @ PATTERN_PTR1
+  	memcpy(&p_track[0x8000-int_get(0x7F00)-data_bytes],p_data,data_bytes);
+  	// update PATTERN_PTR1
+  	int_set(0x7F00,int_get(0x7F00)+data_bytes);
+    // free pattern data 
+  	free(p_data);
+
+  	// free loaded pattern file
+  	free(p_img);
+  	
+  	// write header
+  	p_track[hdr_index*7+0]=o_bottom>>8;						  // byte 0
+  	p_track[hdr_index*7+1]=o_bottom&0x00FF;					// byte 1
+		nib_set(hdr_index*14+ 4,bcd_get(h,100));			// byte 2
+		nib_set(hdr_index*14+ 5,bcd_get(h, 10));
+		nib_set(hdr_index*14+ 6,bcd_get(h,  1));  		// byte 3
+		nib_set(hdr_index*14+ 7,bcd_get(w,100));
+		nib_set(hdr_index*14+ 8,bcd_get(w, 10));			// byte 4
+		nib_set(hdr_index*14+ 9,bcd_get(w,  1));
+		nib_set(hdr_index*14+10,0);							 			// byte 5
+		nib_set(hdr_index*14+11,bcd_get(ptn_id,100));
+		nib_set(hdr_index*14+12,bcd_get(ptn_id, 10)); // byte 6
+		nib_set(hdr_index*14+13,bcd_get(ptn_id,  1));
+
+		// write FINHDR
+		hdr_index++;
+		nib_set(hdr_index*14+10,0);								 			// byte 5
+		nib_set(hdr_index*14+11,bcd_get(ptn_id+1,100));
+		nib_set(hdr_index*14+12,bcd_get(ptn_id+1, 10)); // byte 6
+		nib_set(hdr_index*14+13,bcd_get(ptn_id+1,  1));
+
+		// write LOADED_PATTERN
+		nib_set((0x7FEA<<1)+0,0x01);
+		nib_set((0x7FEA<<1)+1,bcd_get(ptn_id,100));
+		nib_set((0x7FEA<<1)+2,bcd_get(ptn_id, 10));
+		nib_set((0x7FEA<<1)+3,bcd_get(ptn_id, 1));
+		
+		// write UNK1
+		int_set(0x7F02,0x0001);
+		
+		// copy PATTERN_PTR1 to PATTERN_PTR2
+		int_set(0x7F04,int_get(0x7F00));
+
+		// write LAST_BOTTOM
+		int_set(0x7F06,o_bottom);
+
+		// write LAST_TOP
+		int_set(0x7F0A,int_get(0x7F04)-1);
+
+		// write UNK3
+		int_set(0x7F0E,0x8100);
+
+		// write HEADER_PTR
+		int_set(0x7F10,0x7FFF-(hdr_index+1)*7+1);
+
+		// check/decode written data, print out info
+		if(decode_header(hdr_index-1)) {
+		  printf("added #%i is %ix%i @%04X-0x%04X\n",ptn.id,ptn.width,ptn.height,ptn.offset,ptn.offset+calc_size()-1);
+		} else {
+		  printf("something bad happened\n");
+		  if(halt)exit(1);
+		}
+	} else {
+	  printf("not enough memory to store pattern\n");
+	  if(halt)exit(1);
+	}
+}
+
+// add pattern from file
+void add_file() {	
+	uint8_t *p_img;
+	uint16_t w,h;
 	FILE *f;
 	printf("filename> ");
 	if(read_cmd("")) {
@@ -677,121 +796,7 @@ void add_pattern() {
 	  	// if(w>???||h>???) p_img=NULL;
 
       if(p_img) {
-
-  	  	// display on screen
-  	  	for(y=0;y<h;y++) {
-  	  		for(x=0;x<w;x++) {
-  	  			putchar(sample(p_img,w,x,y)?'X':'-');
-  	  		}
-  	  		printf("\n");
-  	  	}
-  
-        // remember bottom offset
-  	  	o_bottom=int_get(0x7F00);
-  
-        // calculate bytes needed to store pattern
-  	  	memo_bytes=(h+1)>>1;
-  	  	data_bytes=((((w+3)>>2)*h)+1)>>1;
-  	  	
-  	  	// Check memory availability (should be 0x2AE, but leave some to be sure)
-  	  	if(0x7FFF-(o_bottom+memo_bytes+data_bytes)>=0x02B0) {
-  
-    	  	// make memo data
-    	  	p_data=malloc(memo_bytes);
-    	  	memset(p_data,0,memo_bytes);
-    	  	// set memo data
-    	  	memset(p_data,0,memo_bytes);
-    	  	// insert into memory @ PATTERN_PTR1
-    	  	memcpy(&p_track[0x8000-int_get(0x7F00)-memo_bytes],p_data,memo_bytes);
-    	  	// update PATTERN_PTR1
-    	  	int_set(0x7F00,int_get(0x7F00)+memo_bytes);
-          // free memo data
-          free(p_data);	  	
-    	  	
-    	  	// make pattern data
-     	  	p_data=malloc(data_bytes);
-     	  	memset(p_data,0,data_bytes);
-    	  	// stride (bits per row)
-    	  	b_stride=(w+3)&~3;
-    	  	// calculate index of last bit in pattern
-    	  	bp_last=(data_bytes<<3)-1;
-    			// set pattern data
-    			for(y=0;y<h;y++) {
-            // calculate index of last bit on line
-            bp_line=bp_last-b_stride*(h-y-1);
-            for(x=0;x<w;x++) {
-              // calculate index of the current bit
-              bp_this=bp_line-x;
-              // sample image
-              if(sample(p_img,w,x,y)) bit_set(p_data,bp_this);
-            }
-    	    }
-    	  	// insert into memory @ PATTERN_PTR1
-    	  	memcpy(&p_track[0x8000-int_get(0x7F00)-data_bytes],p_data,data_bytes);
-    	  	// update PATTERN_PTR1
-    	  	int_set(0x7F00,int_get(0x7F00)+data_bytes);
-          // free pattern data 
-    	  	free(p_data);
-    
-    	  	// free loaded pattern file
-    	  	free(p_img);
-    	  	
-    	  	// write header
-    	  	p_track[hdr_index*7+0]=o_bottom>>8;						  // byte 0
-    	  	p_track[hdr_index*7+1]=o_bottom&0x00FF;					// byte 1
-    			nib_set(hdr_index*14+ 4,bcd_get(h,100));			// byte 2
-    			nib_set(hdr_index*14+ 5,bcd_get(h, 10));
-    			nib_set(hdr_index*14+ 6,bcd_get(h,  1));  		// byte 3
-    			nib_set(hdr_index*14+ 7,bcd_get(w,100));
-    			nib_set(hdr_index*14+ 8,bcd_get(w, 10));			// byte 4
-    			nib_set(hdr_index*14+ 9,bcd_get(w,  1));
-    			nib_set(hdr_index*14+10,0);							 			// byte 5
-    			nib_set(hdr_index*14+11,bcd_get(ptn_id,100));
-    			nib_set(hdr_index*14+12,bcd_get(ptn_id, 10)); // byte 6
-    			nib_set(hdr_index*14+13,bcd_get(ptn_id,  1));
-    
-    			// write FINHDR
-    			hdr_index++;
-    			nib_set(hdr_index*14+10,0);								 			// byte 5
-    			nib_set(hdr_index*14+11,bcd_get(ptn_id+1,100));
-    			nib_set(hdr_index*14+12,bcd_get(ptn_id+1, 10)); // byte 6
-    			nib_set(hdr_index*14+13,bcd_get(ptn_id+1,  1));
-    
-    			// write LOADED_PATTERN
-    			nib_set((0x7FEA<<1)+0,0x01);
-    			nib_set((0x7FEA<<1)+1,bcd_get(ptn_id,100));
-    			nib_set((0x7FEA<<1)+2,bcd_get(ptn_id, 10));
-    			nib_set((0x7FEA<<1)+3,bcd_get(ptn_id, 1));
-    			
-    			// write UNK1
-    			int_set(0x7F02,0x0001);
-    			
-    			// copy PATTERN_PTR1 to PATTERN_PTR2
-    			int_set(0x7F04,int_get(0x7F00));
-    
-    			// write LAST_BOTTOM
-    			int_set(0x7F06,o_bottom);
-    
-    			// write LAST_TOP
-    			int_set(0x7F0A,int_get(0x7F04)-1);
-    
-    			// write UNK3
-    			int_set(0x7F0E,0x8100);
-    
-    			// write HEADER_PTR
-    			int_set(0x7F10,0x7FFF-(hdr_index+1)*7+1);
-    
-    			// check/decode written data, print out info
-    			if(decode_header(hdr_index-1)) {
-    			  printf("added #%i is %ix%i @%04X-0x%04X\n",ptn.id,ptn.width,ptn.height,ptn.offset,ptn.offset+calc_size()-1);
-    			} else {
-    			  printf("something bad happened\n");
-      		  if(halt)exit(1);
-    			}
-    		} else {
-    		  printf("not enough memory to store pattern\n");
-     		  if(halt)exit(1);
-    		}
+				add_pattern(p_img,w,h);
   		} else {
   		  printf("image does not have the correct format\n");
   		  if(halt)exit(1);
@@ -1141,7 +1146,7 @@ void main(int argc,char**argv) {
 			} else if(strcmp(cmd,"f")==0||strcmp(cmd,"format")==0) {
 	  		format();
 			} else if(strcmp(cmd,"a")==0||strcmp(cmd,"add")==0) {
-	  		add_pattern();
+	  		add_file();
 			} else if(strcmp(cmd,"i")==0||strcmp(cmd,"info")==0) {
 	  		info();
 			} else if(strcmp(cmd,"s")==0||strcmp(cmd,"show")==0) {
