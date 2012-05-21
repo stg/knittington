@@ -107,6 +107,7 @@ bool sclose() {
 #include <fcntl.h>
 
 static int h_serial;
+struct termios restore;
 
 // device has form "/dev/ttySn"
 bool sopen(char* device) {
@@ -130,8 +131,10 @@ bool sconfig(char* fmt) {
 			argv[argc++]=++p_parse;
 		} else p_parse++;
 	}
+  // get current settings
+  tcgetattr(h_serial,&options);
+	memcpy(&restore,&options,sizeof(options));
 	// configure baudrate
-	tcgetattr(h_serial,&options);
 	switch(atoi(argv[0])) {
 		case   1200: cfsetispeed(&options,B1200  ); cfsetospeed(&options,B1200  ); break;
 		case   2400: cfsetispeed(&options,B2400  ); cfsetospeed(&options,B2400  ); break;
@@ -179,7 +182,11 @@ int32_t swrite(void* p_write,uint16_t i_write) {
 }
 
 bool sclose() {
-	return close(h_serial)==0;
+  if(h_serial>=0) {
+	  tcsetattr(h_serial,TCSANOW,&restore);
+	  return close(h_serial)==0;
+  }
+  return false;
 }
 
 #endif
