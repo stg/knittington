@@ -23,16 +23,18 @@ Compile and launch knit executable.
 
 Typing ? or help will give
 
-: ?/help      show this
-: r/read      read in data from file
-: w/write     write out data to file
-: f/format    clear all contents
-: a/add       add pattern
-: s/show      display data content
-: e/emulate   emulate floppy
-: i/info      additional info
-: q/quit      end program
-: x/halt      halt on errors
+  ?/help      show this
+  r/read      read in data from file
+  w/write     write out data to file
+  f/format    clear all tracks
+  t/track     set working track
+  a/add       add pattern to track
+  s/show      display content of track
+  i/info      additional track info
+  e/emulate   emulate floppy
+  q/quit      end program
+  x/halt      halt on errors
+
 
 read - Reads image on disk to memory
   The file can be either disk image or folder with emulator files.
@@ -54,9 +56,20 @@ format - Clear computer ram contents
   This will delete everything currently contained in memory and
   ready the program for input of a new file.
 
+
+track - Set working track
+  The machine can store patterns in two separate tracks and this
+  is chosen when saving/loading from the machine.
+  
+  This will sets the current working track for add, show and
+  info commands.
+  
+  Tracks are entered as a number between 1 and 2, ie:
+    track #> 1
+  
   
 add - Add a pattern to memory
-  The pattern is read from a raw image file, ie:See
+  The pattern is read from a raw image file, ie:
     filename> patterns/903.raw
 
   See doc\raw_format.txt for a description of the format.
@@ -76,6 +89,29 @@ show - Show patterns contained in memory
   pattern to print out a graphical representation of the
   pattern as well as it's binary data representation.
 
+
+info - Shows additional non-pattern information
+  This will display all important fields in the currently
+  loaded file and run a verification suite against all of
+  the know values.
+  
+  Verifications are done against the most common and verified
+  to work values that have been downloaded from the machine.
+  
+  Therefore it MAY give FAIL on "write pointer" entries and/or
+  the "loaded head" entry for some files because the machine
+  sometimes inserts a 0x00 byte between patterns which causes
+  a mismatch of 1 for these values. Exactly when/why this is
+  done is uncertain, but it is not needed when writing patterns,
+  so it may actually be a bug in the machine.
+  
+  Additionally, MOST parameters WILL give FAIL on a blank
+  formatted file, regardless if done via device or this
+  program.
+  
+  For a file generated using this program all parameters
+  should give OK before attempting download.
+  
 
 emulate - Start floppy emulator
   
@@ -100,29 +136,6 @@ emulate - Start floppy emulator
   After saving from the machine you can keep it with write.
   
   
-info - Shows additional non-pattern information
-  This will display all important fields in the currently
-  loaded file and run a verification suite against all of
-  the know values.
-  
-  Verifications are done against the most common and verified
-  to work values that have been downloaded from the machine.
-  
-  Therefore it MAY give FAIL on "write pointer" entries and/or
-  the "loaded head" entry for some files because the machine
-  sometimes inserts a 0x00 byte between patterns which causes
-  a mismatch of 1 for these values. Exactly when/why this is
-  done is uncertain, but it is not needed when writing patterns,
-  so it may actually be a bug in the machine.
-  
-  Additionally, MOST parameters WILL give FAIL on a blank
-  formatted file, regardless if done via device or this
-  program.
-  
-  For a file generated using this program all parameters
-  should give OK before attempting download.
-  
-
 quit - Self explanatory
   Go outside and enjoy the weather
   

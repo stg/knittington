@@ -33,6 +33,7 @@ static const char hex[16] = "0123456789ABCDEF";
 // header mem
 static hdr_t ptn;
 static uint8_t data[81920];
+static uint8_t *p_track=data;
 static uint8_t sids[80][12];
 
 // command memory
@@ -249,10 +250,10 @@ static void sigint(int z) {
 }
 
 // prints hex data in traditional 16 column format
-void print_hex(unsigned char* data, uint32_t length) {
+void print_hex(unsigned char* mem, uint32_t length) {
 	uint8_t count=0;
 	while(length--) {
-		printf("%02X",*data++);
+		printf("%02X",*mem++);
 		count=(count+1)&0x0F;
 		if(count) {
 			putchar(' ');
@@ -264,51 +265,51 @@ void print_hex(unsigned char* data, uint32_t length) {
 }
 
 // prints hex data in slim format
-void print_slim_hex(unsigned char* data, uint32_t length) {
+void print_slim_hex(unsigned char* mem, uint32_t length) {
 	while(length--) {
-		printf("%02X",*data++);
+		printf("%02X",*mem++);
 	}
 }
 
 // set bit in *p_data @ bit pointer bp
-void bit_set(uint8_t *p_data,uint32_t bp){
-	p_data[bp>>3]|=0x80>>(bp&7);
+void bit_set(uint8_t *p_mem,uint32_t bp){
+	p_mem[bp>>3]|=0x80>>(bp&7);
 }
 
 // clear bit in *p_data @ bit pointer bp
-void bit_clr(uint8_t *p_data,uint32_t bp){
-	p_data[bp>>3]&=~(0x80>>(bp&7));
+void bit_clr(uint8_t *p_mem,uint32_t bp){
+	p_mem[bp>>3]&=~(0x80>>(bp&7));
 }
 
 // get bit in *p_data @ bit pointer bp
-bool bit_get(uint8_t *p_data,uint32_t bp){
-	return (p_data[bp>>3]&(0x80>>(bp&7)))!=0;
+bool bit_get(uint8_t *p_mem,uint32_t bp){
+	return (p_mem[bp>>3]&(0x80>>(bp&7)))!=0;
 }
 
 // get nibble in data[] @ nibble pointer np
 uint8_t nib_get(uint32_t np) {
-	uint8_t byte=data[np>>1];
+	uint8_t byte=p_track[np>>1];
 	return (np&1)?LSN(byte):MSN(byte);
 }
 
 // set nibble in data[] @ nibble pointer np
 void nib_set(uint32_t np,uint8_t val) {
 	if(np&1) {
-		data[np>>1]=(data[np>>1]&0xF0)|(val);
+		p_track[np>>1]=(p_track[np>>1]&0xF0)|(val);
 	} else {
-		data[np>>1]=(data[np>>1]&0x0F)|(val<<4);
+		p_track[np>>1]=(p_track[np>>1]&0x0F)|(val<<4);
 	}
 }
 
 // get big-endian int16 in data[] @ byte pointer p
 uint16_t int_get(uint32_t p) {
-	return (data[p+0]<<8)|(data[p+1]<<0);
+	return (p_track[p+0]<<8)|(p_track[p+1]<<0);
 }
 
 // set big-endian int16 in data[] @ byte pointer p
 void int_set(uint32_t p,uint32_t val) {
-	data[p+0]=(val>>8)&0x00FF;
-	data[p+1]=(val>>0)&0x00FF;
+	p_track[p+0]=(val>>8)&0x00FF;
+	p_track[p+1]=(val>>0)&0x00FF;
 }
 
 
@@ -321,7 +322,7 @@ uint16_t calc_size() {
 
 // decode header and store in global ptn
 bool decode_header(uint8_t index) {
-	uint8_t *hdr=&data[index*7];
+	uint8_t *hdr=&p_track[index*7];
 	if(hdr[0]!=0x55) {
 		ptn.pos = 0x7FFF-(index*7);
 		ptn.offset =hdr[0]<<8;			
@@ -398,22 +399,41 @@ uint32_t str_to_id(char *str) {
 // format memory
 void format() {
 	uint8_t n;
-	// clear sector ids
+	// set sector ids
 	for(n=0;n<80;n++){
 		memset(&sids[n][0],0,12);
-		sids[n][0]=n<32?1:0;
+		sids[n][0]=n<64?n/32:0;
 	}
-	// clear data
-	memset(data,0x55,81920-256);
-	memset(&data[0x7F00],0x00,256);
-	data[0x0005]=0x09; // pattern 901 partial header data
-	data[0x0006]=0x01;
-	data[0x7F00]=0x01; // next offset
-	data[0x7F01]=0x20;
-	data[0x7F10]=0x7F; // unknown pointer
-	data[0x7F11]=0xF9;
-	data[0x7FEA]=0x10; // 1xxx BCD (000=no pattern)
-	printf("memory initialized\n");
+	for(n=0;n<2;n++) {
+  	p_track=&data[n<<15];
+  	// clear data
+  	memset(p_track,0x55,32768-256);
+  	memset(&p_track[0x7F00],0x00,256);
+  	p_track[0x0005]=0x09; // pattern 901 partial header data
+  	p_track[0x0006]=0x01;
+  	p_track[0x7F00]=0x01; // next offset
+  	p_track[0x7F01]=0x20;
+  	p_track[0x7F10]=0x7F; // unknown pointer
+  	p_track[0x7F11]=0xF9;
+  	p_track[0x7FEA]=0x10; // 1xxx BCD (000=no pattern)
+  }
+  p_track=data;
+	printf("memory initialized, track is 1\n");
+}
+
+// set current track
+void track() {
+	printf("current track is %i\n",((p_track-data)>>15)+1);
+	printf("track #> ");
+	if(read_cmd("")) {
+		if(strlen(cmd)==1&&(cmd[0]=='1'||cmd[0]=='2')) {
+		  p_track=&data[(cmd[0]-'1')<<15];
+		  printf("track is now %s\n",cmd);
+		} else {
+			printf("need number between 1 and 2\n");
+		  if(halt)exit(1);
+		}
+	}
 }
 
 // display patterns contained in memory
@@ -527,8 +547,9 @@ void readin() {
 			  	fread(&sids[n][0],1,12,f);
 			  	fclose(f);
 				} else {
-				 	printf("unable to open file %s\n",fn);	
+				 	printf("unable to open file %s\n",fn);
     		  if(halt)exit(1);
+    		  format();
 				 	break;
 				}
 	  		//read sector
@@ -541,10 +562,11 @@ void readin() {
 				} else {
 				 	printf("unable to open file %s\n",fn);	
     		  if(halt)exit(1);
+    		  format();
 				 	break;
 				}
 	  	}
-			if(n==80) printf("read 80x1k dat+id\n");
+			if(n==80) printf("read 80x1k dat+id, track is 1\n");
 	  } else {
 		  f=fopen(cmd,"rb");
 		  if(f) {
@@ -561,14 +583,14 @@ void readin() {
 			  			memset(&sids[n][0],0,12);
 			  			sids[n][0]=n<32?1:0;
 			  		}
-			  		printf("read 32k blob\n");
+			  		printf("read 32k blob, track is 1\n");
 		  		} else {
 			  		fseek(f,0,0);
 			  		fread(data,1,81920,f);
 			  		for(n=0;n<80;n++) {
 			  			fread(&sids[n][0],1,12,f);
 			  		}
-			  		printf("read 80k disk image\n");
+			  		printf("read 80k disk image, track is 1\n");
 		  		}
 		  	}
 		  	fclose(f);
@@ -577,6 +599,7 @@ void readin() {
   		  if(halt)exit(1);
 		  }
 		}
+  	p_track=data;
 	}
 }
 
@@ -679,7 +702,7 @@ void add_pattern() {
     	  	// set memo data
     	  	memset(p_data,0,memo_bytes);
     	  	// insert into memory @ PATTERN_PTR1
-    	  	memcpy(&data[0x8000-int_get(0x7F00)-memo_bytes],p_data,memo_bytes);
+    	  	memcpy(&p_track[0x8000-int_get(0x7F00)-memo_bytes],p_data,memo_bytes);
     	  	// update PATTERN_PTR1
     	  	int_set(0x7F00,int_get(0x7F00)+memo_bytes);
           // free memo data
@@ -704,7 +727,7 @@ void add_pattern() {
             }
     	    }
     	  	// insert into memory @ PATTERN_PTR1
-    	  	memcpy(&data[0x8000-int_get(0x7F00)-data_bytes],p_data,data_bytes);
+    	  	memcpy(&p_track[0x8000-int_get(0x7F00)-data_bytes],p_data,data_bytes);
     	  	// update PATTERN_PTR1
     	  	int_set(0x7F00,int_get(0x7F00)+data_bytes);
           // free pattern data 
@@ -714,8 +737,8 @@ void add_pattern() {
     	  	free(p_img);
     	  	
     	  	// write header
-    	  	data[hdr_index*7+0]=o_bottom>>8;						  // byte 0
-    	  	data[hdr_index*7+1]=o_bottom&0x00FF;					// byte 1
+    	  	p_track[hdr_index*7+0]=o_bottom>>8;						  // byte 0
+    	  	p_track[hdr_index*7+1]=o_bottom&0x00FF;					// byte 1
     			nib_set(hdr_index*14+ 4,bcd_get(h,100));			// byte 2
     			nib_set(hdr_index*14+ 5,bcd_get(h, 10));
     			nib_set(hdr_index*14+ 6,bcd_get(h,  1));  		// byte 3
@@ -788,9 +811,9 @@ void info() {
 	uint16_t addr;
 	
 	// read selected pattern
-	sel_pattern = LSN(data[0x7FEA]) * 100
-	            + MSN(data[0x7FEB]) * 10
-	            + LSN(data[0x7FEB]) * 1;
+	sel_pattern = LSN(p_track[0x7FEA]) * 100
+	            + MSN(p_track[0x7FEB]) * 10
+	            + LSN(p_track[0x7FEB]) * 1;
 
 	// find last pattern
 	for(n=0;n<98;n++) {
@@ -818,66 +841,66 @@ void info() {
 	if(int_get(0x7F10)==ptn.pos-13) puts("OK"); else printf("FAIL %04X\n",ptn.pos-13);
 	printf("0x7F12  0x0000     pointer 2     : 0x%04X     ",int_get(0x7F12));
 	puts("?");
-	printf("0x7F12  0x000000   0x000000      : 0x%04X%02X   ",int_get(0x7F14),data[0x7F16]);
-	if(int_get(0x7F14)==0&&data[0x7F16]==0) puts("OK"); else puts("FAIL");
+	printf("0x7F12  0x000000   0x000000      : 0x%04X%02X   ",int_get(0x7F14),p_track[0x7F16]);
+	if(int_get(0x7F14)==0&&p_track[0x7F16]==0) puts("OK"); else puts("FAIL");
 	printf("0x7FEA  0x1000     loaded pattern: 0x%04X     ",int_get(0x7FEA));
-	if(last_pattern==sel_pattern&&MSN(data[0x7FEA])==1) puts("OK"); else puts("FAIL");
-	printf("0x7FFF  0x00       unknown       : 0x%02X       ", data[0x7FFF]);
+	if(last_pattern==sel_pattern&&MSN(p_track[0x7FEA])==1) puts("OK"); else puts("FAIL");
+	printf("0x7FFF  0x00       unknown       : 0x%02X       ", p_track[0x7FFF]);
 	puts("?");
 	
 	puts("");
 
 	// Check AREA0	
-	rep[0]=data[0x7EE0];
-	for(addr=0x7EE0;addr<0x7EE0+7;addr++) if(data[addr]!=rep[0]) break;
+	rep[0]=p_track[0x7EE0];
+	for(addr=0x7EE0;addr<0x7EE0+7;addr++) if(p_track[addr]!=rep[0]) break;
 	if(addr==0x7EE0+7&&((rep[0]==0xAA)||(rep[0]==0x55))) {
 		printf("AREA0   0x%02X * 7                              OK\n",rep[0]);
 	} else {
 		printf("AREA0                                         FAIL\n");
-		print_hex(&data[0x7FE0],7);
+		print_hex(&p_track[0x7FE0],7);
 	}
 
 	// Just print AREA1 - don't know how to check
 	printf("AREA1   ");
-	print_slim_hex(&data[0x7EE7],25);
+	print_slim_hex(&p_track[0x7EE7],25);
 	printf("\n");
 
 	// Just print AREA2 - don't know how to check
 	printf("AREA2   ");
-	print_slim_hex(&data[0x7F17],25);
+	print_slim_hex(&p_track[0x7F17],25);
 	printf("\n");
 
 	// Check AREA3
-	for(addr=0x7F30;addr<0x7F30+186;addr++) if(data[addr]!=00) break;
+	for(addr=0x7F30;addr<0x7F30+186;addr++) if(p_track[addr]!=00) break;
 	if(addr==0x7F30+186) {
 		printf("AREA3   0x00 * 186                            OK\n",rep[0]);
 	} else {
 		printf("AREA3                                         FAIL\n");
-		print_hex(&data[0x7FE0],7);
+		print_hex(&p_track[0x7FE0],7);
 	}
 
 	// Check AREA4
-	for(addr=0x7FEC;addr<0x7FEC+19;addr++) if(data[addr]!=00) break;
+	for(addr=0x7FEC;addr<0x7FEC+19;addr++) if(p_track[addr]!=00) break;
 	if(addr==0x7FEC+19&&((rep[0]==0xAA)||(rep[0]==0x55))) {
 		printf("AREA4   0x00 * 19                             OK\n",rep[0]);
 	} else {
 		printf("AREA4                                         FAIL\n");
-		print_hex(&data[0x7FEC],19);
+		print_hex(&p_track[0x7FEC],19);
 	}
 	
 	printf("\n");
 	
 	// Check FINHDR
 	printf("FINHDR  ");
-	print_slim_hex(&data[0x7FFF-ptn.pos+7],7);
+	print_slim_hex(&p_track[0x7FFF-ptn.pos+7],7);
 	for(n=0;n<5;n++) {
-		if(data[0x7FFF-ptn.pos+7+n]!=0x55) break;
+		if(p_track[0x7FFF-ptn.pos+7+n]!=0x55) break;
 	}
 	if(n==5
-	&& MSN(data[0x7FFF-ptn.pos+7+5])==0
-	&& LSN(data[0x7FFF-ptn.pos+7+5])==(((ptn.id+1)/100)%10)
-	&& MSN(data[0x7FFF-ptn.pos+7+6])==(((ptn.id+1)/ 10)%10)
-	&& LSN(data[0x7FFF-ptn.pos+7+6])==(((ptn.id+1)/  1)%10)) {
+	&& MSN(p_track[0x7FFF-ptn.pos+7+5])==0
+	&& LSN(p_track[0x7FFF-ptn.pos+7+5])==(((ptn.id+1)/100)%10)
+	&& MSN(p_track[0x7FFF-ptn.pos+7+6])==(((ptn.id+1)/ 10)%10)
+	&& LSN(p_track[0x7FFF-ptn.pos+7+6])==(((ptn.id+1)/  1)%10)) {
 		printf("                        OK\n");
 	} else {
 		printf("                        FAIL\n");
@@ -1098,11 +1121,12 @@ void main(int argc,char**argv) {
 				printf("?/help      show this\n");
 				printf("r/read      read in data from file\n");
 				printf("w/write     write out data to file\n");
-				printf("f/format    clear all contents\n");
-				printf("a/add       add pattern\n");
-				printf("s/show      display data content\n");
+				printf("f/format    clear all tracks\n");
+				printf("t/track     set working track\n");
+				printf("a/add       add pattern to track\n");
+				printf("s/show      display content of track\n");
+				printf("i/info      additional track info\n");
 				printf("e/emulate   emulate floppy\n");
-				printf("i/info      additional info\n");
 				printf("q/quit      end program\n");
 				printf("x/halt      halt on errors\n");
 			} else if(strcmp(cmd,"quit")==0||strcmp(cmd,"q")==0) {
@@ -1112,14 +1136,16 @@ void main(int argc,char**argv) {
 				readin();
 			} else if(strcmp(cmd,"w")==0||strcmp(cmd,"write")==0) {
 				writeout();
-			} else if(strcmp(cmd,"s")==0||strcmp(cmd,"show")==0) {
-				display();
+			} else if(strcmp(cmd,"t")==0||strcmp(cmd,"track")==0) {
+	  		track();
 			} else if(strcmp(cmd,"f")==0||strcmp(cmd,"format")==0) {
 	  		format();
 			} else if(strcmp(cmd,"a")==0||strcmp(cmd,"add")==0) {
 	  		add_pattern();
 			} else if(strcmp(cmd,"i")==0||strcmp(cmd,"info")==0) {
 	  		info();
+			} else if(strcmp(cmd,"s")==0||strcmp(cmd,"show")==0) {
+				display();
 			} else if(strcmp(cmd,"x")==0||strcmp(cmd,"halt")==0) {
 	  		halt=!halt;
 	  		printf("halt on errors: %s\n",halt?"yes":"no");
