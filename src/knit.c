@@ -29,9 +29,6 @@ typedef struct {
 	uint32_t pos;
 } hdr_t;
 
-// hex
-static const char hex[16] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
-
 // header mem
 static hdr_t ptn;
 static uint8_t data[81920];
@@ -366,11 +363,17 @@ static const char* fdc_name(uint8_t cmd) {
 	}
 }
 
+// make hex char
+static char hexchar(uint8_t c) {
+  if(c<10)return '0'+c;
+  return 'A'+c-10;
+}
+
 // sets successful response code
 static void fdc_ok(char *p_ret,uint8_t sect) {
   strcpy(p_ret,"00000000");
-  p_ret[2]=hex[sect>>4];
-  p_ret[3]=hex[sect&0xF];
+  p_ret[2]=hexchar(sect>>4);
+  p_ret[3]=hexchar(sect&0xF);
 }
 
 // fdc mode command executer
