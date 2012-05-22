@@ -353,6 +353,7 @@ void exec_op(uint8_t cmd[]) {
 	}
 }
 
+// returns pointer to name of fdc command
 static char* fdc_name(uint8_t cmd) {
 	switch(cmd) {
 		case 'A':           return "read id   ";
@@ -364,7 +365,8 @@ static char* fdc_name(uint8_t cmd) {
 	}
 }
 
-static void fdc_err(uint8_t *p_ret,uint8_t sect) {
+// sets successful response code
+static void fdc_ok(uint8_t *p_ret,uint8_t sect) {
   strcpy(p_ret,"00000000");
   p_ret[2]=hex[sect>>4];
   p_ret[3]=hex[sect&0xF];
@@ -390,7 +392,7 @@ static uint16_t exec_fdc(uint8_t cmd[0]) {
 		// check sector validity
 		if(cmd[1]<80&&cmd[2]==1) {
 			// respond ok
-			fdc_err(ret,cmd[1]);
+			fdc_ok(ret,cmd[1]);
 			// return
 			switch(cmd[0]) {
 				case 'A': case 'R':           count=   1; break;
@@ -423,18 +425,18 @@ static void exec_fdc_data(uint8_t *cmd) {
 			strcpy(ret,"40000000"); // fail
 			for(n=0;n<80;n++) {
 				if(memcmp(&sids[n][0],p_data,12)==0) {
-					fdc_err(ret,n); // success
+					fdc_ok(ret,n); // success
 					break;
 				}
 			}
 			break;
 		case 'B': case 'C': // write sector id
 			memcpy(&sids[cmd[1]][0],p_data,12);
-			fdc_err(ret,cmd[1]);
+			fdc_ok(ret,cmd[1]);
 			break;
 		case 'W': case 'X': // write sector data
 			memcpy(&data[(uint16_t)(cmd[1])<<10],p_data,1024);
-			fdc_err(ret,cmd[1]);
+			fdc_ok(ret,cmd[1]);
 			break;
 	}
 	printf("[fdc emu] exec 0x%02X [%s] resp: %s\n",cmd[0],fdc_name(cmd[0]),ret);
