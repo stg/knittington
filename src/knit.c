@@ -364,6 +364,12 @@ static char* fdc_name(uint8_t cmd) {
 	}
 }
 
+static void fdc_err(uint8_t *p_ret,uint8_t sect) {
+  strcpy(p_ret,"00000000");
+  p_ret[2]=hex[sect>>4];
+  p_ret[3]=hex[sect&0xF];
+}
+
 // fdc mode command executer
 static uint16_t exec_fdc(uint8_t cmd[0]) {
 	uint8_t ret[9]="80000000";
@@ -376,7 +382,7 @@ static uint16_t exec_fdc(uint8_t cmd[0]) {
 		memset(data,0x00,80*1024);
 		for(n=0;n<80;n++) memset(&sids[n][0],0x00,12);
 		// respond ok
-		sprintf(ret,"00000000");
+		strcpy(ret,"00000000");
 		printf("[fdc emu] exec 0x%02X [format    ] resp: %s\n",cmd[0],ret);
 	} else {
 		if(cmd[1]==0xFF)cmd[1]=0; // physical sector default
@@ -384,7 +390,7 @@ static uint16_t exec_fdc(uint8_t cmd[0]) {
 		// check sector validity
 		if(cmd[1]<80&&cmd[2]==1) {
 			// respond ok
-			sprintf(ret,"00%02X0000",cmd[1]);
+			fdc_err(ret,cmd[1]);
 			// return
 			switch(cmd[0]) {
 				case 'A': case 'R':           count=   1; break;
@@ -414,21 +420,21 @@ static void exec_fdc_data(uint8_t *cmd) {
 			printf("[fdc emu] exec 0x%02X [%s]\n",cmd[0],fdc_name(cmd[0]));
 			return;
 		case 'S': 					// find sector
-			sprintf(ret,"40000000"); // fail
+			strcpy(ret,"40000000"); // fail
 			for(n=0;n<80;n++) {
 				if(memcmp(&sids[n][0],p_data,12)==0) {
-					sprintf(ret,"00%02X0000",n); // success
+					fdc_err(ret,n); // success
 					break;
 				}
 			}
 			break;
 		case 'B': case 'C': // write sector id
 			memcpy(&sids[cmd[1]][0],p_data,12);
-			sprintf(ret,"00%02X0000",cmd[1]);
+			fdc_err(ret,cmd[1]);
 			break;
 		case 'W': case 'X': // write sector data
 			memcpy(&data[(uint16_t)(cmd[1])<<10],p_data,1024);
-			sprintf(ret,"00%02X0000",cmd[1]);
+			fdc_err(ret,cmd[1]);
 			break;
 	}
 	printf("[fdc emu] exec 0x%02X [%s] resp: %s\n",cmd[0],fdc_name(cmd[0]),ret);
