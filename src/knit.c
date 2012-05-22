@@ -4,7 +4,8 @@
 //
 // senseitg@gmail.com 2012-May-17
 
-// PUBLIC is for possible addition to library
+// PUBLIC is for possible addition to library/OF C++ class
+// These are requested by Mar Canet
 
 //== DECLARATIONS ====================================================
 
