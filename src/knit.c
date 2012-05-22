@@ -30,7 +30,7 @@ typedef struct {
 } hdr_t;
 
 // hex
-static const char hex[16] = "0123456789ABCDEF";
+static const char hex[16] = {'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'};
 
 // header mem
 static hdr_t ptn;
@@ -222,7 +222,7 @@ static bool sclose() {
 
 // command input routine that handles several
 // commands in one input as well as strings
-static bool read_cmd(char *fail) {
+static bool read_cmd(const char *fail) {
 	char *ret;
 	char *p_src,*p_dst;
 	uint16_t len;
@@ -355,7 +355,7 @@ void exec_op(uint8_t cmd[]) {
 }
 
 // returns pointer to name of fdc command
-static char* fdc_name(uint8_t cmd) {
+static const char* fdc_name(uint8_t cmd) {
 	switch(cmd) {
 		case 'A':           return "read id   ";
 		case 'R':           return "read sect ";
@@ -367,7 +367,7 @@ static char* fdc_name(uint8_t cmd) {
 }
 
 // sets successful response code
-static void fdc_ok(uint8_t *p_ret,uint8_t sect) {
+static void fdc_ok(char *p_ret,uint8_t sect) {
   strcpy(p_ret,"00000000");
   p_ret[2]=hex[sect>>4];
   p_ret[3]=hex[sect&0xF];
@@ -375,7 +375,7 @@ static void fdc_ok(uint8_t *p_ret,uint8_t sect) {
 
 // fdc mode command executer
 static uint16_t exec_fdc(uint8_t cmd[0]) {
-	uint8_t ret[9]="80000000";
+	char ret[9]="80000000";
 	uint16_t count=0;
 	uint8_t n;
 	if(cmd[0]=='F'||cmd[0]=='G') {
@@ -410,7 +410,7 @@ static uint16_t exec_fdc(uint8_t cmd[0]) {
 
 // fdc mode command+data executer
 static void exec_fdc_data(uint8_t *cmd) {
-	uint8_t ret[9];
+	char ret[9];
 	uint8_t *p_data=&cmd[4];
 	uint8_t n;
 	switch(cmd[0]) {
@@ -897,7 +897,7 @@ uint16_t add_pattern(uint8_t *p_img,uint16_t w,uint16_t h) {
 	if(0x7FFF-(o_bottom+memo_bytes+data_bytes)>=0x02B0&&ptn_id<999) {
 
   	// make memo data
-  	p_data=malloc(memo_bytes);
+  	p_data=(uint8_t*)malloc(memo_bytes);
   	memset(p_data,0,memo_bytes);
   	// set memo data
   	memset(p_data,0,memo_bytes);
@@ -909,7 +909,7 @@ uint16_t add_pattern(uint8_t *p_img,uint16_t w,uint16_t h) {
     free(p_data);	  	
   	
   	// make pattern data
-  	p_data=malloc(data_bytes);
+  	p_data=(uint8_t*)malloc(data_bytes);
   	memset(p_data,0,data_bytes);
   	// stride (bits per row)
   	b_stride=(w+3)&~3;
@@ -1027,7 +1027,7 @@ static void add_file() {
 	  if(f) {
 
       // read image file
-      p_img=image_read(f,&w,&h);
+      p_img=(uint8_t*)image_read(f,&w,&h);
 	  	fclose(f);
 	  	
 	  	// TODO: check size, what is machine maximum?
@@ -1161,7 +1161,7 @@ bool add_raw(uint8_t p_img[]) {
 }
 
 // do the nasty
-void main(int argc,char**argv) {
+int main(int argc,char**argv) {
 	uint8_t n;
 	uint8_t *hdr;
 	uint32_t ptn_id;
