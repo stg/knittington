@@ -4,6 +4,7 @@
 //
 // senseitg@gmail.com 2012-May-17
 
+// PUBLIC is for possible addition to library
 
 //== DECLARATIONS ====================================================
 
@@ -20,9 +21,9 @@
 
 // pattern info
 typedef struct {
-	uint32_t id;
-	uint32_t width;
-	uint32_t height;
+	uint16_t id;
+	uint16_t width;
+	uint16_t height;
 	uint32_t offset;
 	uint32_t pos;
 } hdr_t;
@@ -43,6 +44,7 @@ static char cmd[256];
 // flags
 static bool halt=false,stop=false;
 
+
 //== SERIAL STUFF ====================================================
 
 #ifdef _WIN32
@@ -52,13 +54,18 @@ static bool halt=false,stop=false;
 
 static HANDLE h_serial;
 
+// windows - open serial port
 // device has form "COMn"
-bool sopen(char* device) {
+// returns true if successful
+static bool sopen(char* device) {
 	h_serial=CreateFile(device,GENERIC_READ|GENERIC_WRITE,0,0,OPEN_EXISTING,0,0);
 	return h_serial!=INVALID_HANDLE_VALUE;
 }
 
-bool sconfig(char* fmt) {
+// windows - configure serial port
+// fmt has form "baud,parity,databits,stopbit", ie: "9600,N,8,1"
+// returns true if successful
+static bool sconfig(char* fmt) {
 	DCB dcb;
 	COMMTIMEOUTS cmt;
   // clear dcb  
@@ -85,19 +92,25 @@ bool sconfig(char* fmt) {
 	return true;
 }
 
-int32_t sread(void *p_read,uint16_t i_read) {
+// windows - read from serial port
+// returns bytes actually read
+static int32_t sread(void *p_read,uint16_t i_read) {
 	DWORD i_actual=0;
 	if(!ReadFile(h_serial,p_read,i_read,&i_actual,NULL)) return -1;
 	return (int32_t)i_actual;
 }
 
-int32_t swrite(void* p_write,uint16_t i_write) {
+// windows - write to serial port
+// returns bytes actually written
+static int32_t swrite(void* p_write,uint16_t i_write) {
 	DWORD i_actual=0;
 	if(!WriteFile(h_serial,p_write,i_write,&i_actual,NULL)) return -1;
 	return (int32_t)i_actual;
 }
 
-bool sclose() {
+// windows - close serial port
+// returns true if successful
+static bool sclose() {
 	return CloseHandle(h_serial)!=0;
 }
 
@@ -108,15 +121,20 @@ bool sclose() {
 #include <fcntl.h>
 
 static int h_serial;
-struct termios restore;
+static struct termios restore;
 
+// posix - open serial port
 // device has form "/dev/ttySn"
-bool sopen(char* device) {
+// returns true if successful
+static bool sopen(char* device) {
 	h_serial=open(device,O_RDWR|O_NOCTTY|O_NDELAY);
 	return h_serial>=0;
 }
 
-bool sconfig(char* fmt) {
+// posix - configure serial port
+// fmt has form "baud,parity,databits,stopbit", ie: "9600,N,8,1"
+// returns true if successful
+static bool sconfig(char* fmt) {
 	struct termios options;
 	char* argv[4];
 	unsigned char argc;
@@ -174,17 +192,23 @@ bool sconfig(char* fmt) {
 	return tcsetattr(h_serial,TCSANOW,&options)==0;
 }
 
-int32_t sread(void* p_read,uint16_t i_read) {
+// posix - read from serial port
+// returns bytes actually read
+static int32_t sread(void* p_read,uint16_t i_read) {
 	return (int32_t)read(h_serial,p_read,(int)i_read);
 }
 
-int32_t swrite(void* p_write,uint16_t i_write) {
+// posix - write to serial port
+// returns bytes actually written
+static int32_t swrite(void* p_write,uint16_t i_write) {
 	return (int32_t)write(h_serial,p_write,(int)i_write);
 }
 
-bool sclose() {
+// posix - close serial port
+// returns true if successful
+static bool sclose() {
   if(h_serial>=0) {
-	  tcsetattr(h_serial,TCSANOW,&restore);
+	  tcsetattr(h_serial,TCSANOW,&restore); // restore original configuration
 	  return close(h_serial)==0;
   }
   return false;
@@ -197,7 +221,7 @@ bool sclose() {
 
 // command input routine that handles several
 // commands in one input as well as strings
-bool read_cmd(char *fail) {
+static bool read_cmd(char *fail) {
 	char *ret;
 	char *p_src,*p_dst;
 	uint16_t len;
@@ -250,7 +274,7 @@ static void sigint(int z) {
 }
 
 // prints hex data in traditional 16 column format
-void print_hex(unsigned char* mem, uint32_t length) {
+static void print_hex(unsigned char* mem, uint32_t length) {
 	uint8_t count=0;
 	while(length--) {
 		printf("%02X",*mem++);
@@ -265,35 +289,35 @@ void print_hex(unsigned char* mem, uint32_t length) {
 }
 
 // prints hex data in slim format
-void print_slim_hex(unsigned char* mem, uint32_t length) {
+static void print_slim_hex(unsigned char* mem, uint32_t length) {
 	while(length--) {
 		printf("%02X",*mem++);
 	}
 }
 
 // set bit in *p_data @ bit pointer bp
-void bit_set(uint8_t *p_mem,uint32_t bp){
+static void bit_set(uint8_t *p_mem,uint32_t bp){
 	p_mem[bp>>3]|=0x80>>(bp&7);
 }
 
 // clear bit in *p_data @ bit pointer bp
-void bit_clr(uint8_t *p_mem,uint32_t bp){
+static void bit_clr(uint8_t *p_mem,uint32_t bp){
 	p_mem[bp>>3]&=~(0x80>>(bp&7));
 }
 
 // get bit in *p_data @ bit pointer bp
-bool bit_get(uint8_t *p_mem,uint32_t bp){
+static bool bit_get(uint8_t *p_mem,uint32_t bp){
 	return (p_mem[bp>>3]&(0x80>>(bp&7)))!=0;
 }
 
 // get nibble in data[] @ nibble pointer np
-uint8_t nib_get(uint32_t np) {
+static uint8_t nib_get(uint32_t np) {
 	uint8_t byte=p_track[np>>1];
 	return (np&1)?LSN(byte):MSN(byte);
 }
 
 // set nibble in data[] @ nibble pointer np
-void nib_set(uint32_t np,uint8_t val) {
+static void nib_set(uint32_t np,uint8_t val) {
 	if(np&1) {
 		p_track[np>>1]=(p_track[np>>1]&0xF0)|(val);
 	} else {
@@ -302,26 +326,220 @@ void nib_set(uint32_t np,uint8_t val) {
 }
 
 // get big-endian int16 in data[] @ byte pointer p
-uint16_t int_get(uint32_t p) {
+static uint16_t int_get(uint32_t p) {
 	return (p_track[p+0]<<8)|(p_track[p+1]<<0);
 }
 
 // set big-endian int16 in data[] @ byte pointer p
-void int_set(uint32_t p,uint32_t val) {
+static void int_set(uint32_t p,uint32_t val) {
 	p_track[p+0]=(val>>8)&0x00FF;
 	p_track[p+1]=(val>>0)&0x00FF;
 }
 
 
-//== ACTUAL FUN STUFF ================================================
+//== FLOPPY DRIVE EMULATION ==========================================
+
+// serial write with error printing
+static int32_t eswrite(void* p_write,uint16_t i_write) {
+	if(swrite(p_write,i_write)!=i_write) printf("unable to write to serial port\n");
+}
+
+// op mode command executer
+void exec_op(uint8_t cmd[]) {
+	if(cmd[0]==0x08) {
+		printf("[op mode] recv 0x08 [fdc mode  ]\n");
+	} else {
+		printf("[op mode] recv 0x%02X bad/unsupported command\n",cmd[0]);
+	}
+}
+
+static char* fdc_name(uint8_t cmd) {
+	switch(cmd) {
+		case 'A':           return "read id   ";
+		case 'R':           return "read sect ";
+		case 'S':           return "find sect ";
+		case 'B': case 'C': return "write id  ";
+		case 'W': case 'X': return "write sect";
+		default: return "?";
+	}
+}
+
+// fdc mode command executer
+static uint16_t exec_fdc(uint8_t cmd[0]) {
+	uint8_t ret[9]="80000000";
+	uint16_t count=0;
+	uint8_t n;
+	if(cmd[0]=='F'||cmd[0]=='G') {
+		// check length code (but format anyways)
+		if(cmd[1]!=5) printf("recv %02X [format    ] unsupported length code 0x%02X\n",cmd[0],cmd[1]);
+		// format memory
+		memset(data,0x00,80*1024);
+		for(n=0;n<80;n++) memset(&sids[n][0],0x00,12);
+		// respond ok
+		sprintf(ret,"00000000");
+		printf("[fdc emu] exec 0x%02X [format    ] resp: %s\n",cmd[0],ret);
+	} else {
+		if(cmd[1]==0xFF)cmd[1]=0; // physical sector default
+		if(cmd[2]==0xFF)cmd[2]=1; // logical sector default
+		// check sector validity
+		if(cmd[1]<80&&cmd[2]==1) {
+			// respond ok
+			sprintf(ret,"00%02X0000",cmd[1]);
+			// return
+			switch(cmd[0]) {
+				case 'A': case 'R':           count=   1; break;
+				case 'S': case 'B': case 'C': count=  12; break;
+				case 'W': case 'X':           count=1024; break;
+			}
+			printf("[fdc emu] recv 0x%02X [%s] resp: %s expect %i bytes\n",cmd[0],fdc_name(cmd[0]),ret,count);
+		} else printf("[fdc emu] recv 0x%02X [%s] resp: %s bad sector %i\\%i\n",cmd[0],fdc_name(cmd[0]),ret,cmd[1],cmd[2]);
+	}
+	// send response
+	eswrite(ret,8);
+	return count;
+}
+
+// fdc mode command+data executer
+static void exec_fdc_data(uint8_t *cmd) {
+	uint8_t ret[9];
+	uint8_t *p_data=&cmd[4];
+	uint8_t n;
+	switch(cmd[0]) {
+		case 'A': 					// read sector id
+			if(*p_data=='\x0D') eswrite(&sids[cmd[1]][0],12);
+			printf("[fdc emu] exec 0x%02X [%s]\n",cmd[0],fdc_name(cmd[0]));
+			return;
+		case 'R': 					// read sector data
+			if(*p_data=='\x0D') eswrite(&data[(uint16_t)(cmd[1])<<10],1024);
+			printf("[fdc emu] exec 0x%02X [%s]\n",cmd[0],fdc_name(cmd[0]));
+			return;
+		case 'S': 					// find sector
+			sprintf(ret,"40000000"); // fail
+			for(n=0;n<80;n++) {
+				if(memcmp(&sids[n][0],p_data,12)==0) {
+					sprintf(ret,"00%02X0000",n); // success
+					break;
+				}
+			}
+			break;
+		case 'B': case 'C': // write sector id
+			memcpy(&sids[cmd[1]][0],p_data,12);
+			sprintf(ret,"00%02X0000",cmd[1]);
+			break;
+		case 'W': case 'X': // write sector data
+			memcpy(&data[(uint16_t)(cmd[1])<<10],p_data,1024);
+			sprintf(ret,"00%02X0000",cmd[1]);
+			break;
+	}
+	printf("[fdc emu] exec 0x%02X [%s] resp: %s\n",cmd[0],fdc_name(cmd[0]),ret);
+	eswrite(ret,8);
+}
+
+// PUBLIC: emulate floppy drive
+void emulate() {
+  uint8_t byte;
+  uint8_t state,csum;
+  uint16_t count;
+ 	uint8_t buf[1028],*p_buf;
+ 	char fmt[]="9600,N,8,1";
+	printf("serial device> ");
+	if(read_cmd("")) {
+  	if(sopen(cmd)) {
+  	  printf("serial port open\n");
+  	  if(!sconfig(fmt)) {
+  	    printf("unable to configure serial port - ignoring\n");
+  	  }
+	    printf("serial port listening... (ctrl)^C/SIGINT to stop\n");
+    	// listen for ctrl^C
+    	signal(SIGINT, sigint);
+	    while(!stop) {
+        if(sread(&byte,1)==1) {
+          switch(state) {
+            case 0:
+              if(byte=='Z') state=1;
+              else if(byte!=0x00&&strchr("FGARSBCWX",byte)!=NULL) {
+              	p_buf=buf;
+              	*p_buf++=csum=byte;
+              	buf[1]=buf[2]=0xFF;
+              	state=6;
+              } else printf("[general] recv 0x%02X bad/unsupported command\n",byte);
+              break;
+            case 1: // opmode second preamble
+              if(byte=='Z') state=2;
+             	else printf("[op mode] recv 0x%02X expected preamble 0x5A\n",byte);
+             	break;
+            case 2: // opmode block format
+            	p_buf=buf;
+            	*p_buf++=csum=byte;
+            	state=3;
+            	break;
+            case 3: // opmode length of data block
+            	state=(count=byte)?4:5;
+            	csum+=byte;
+            	break;
+            case 4: // opmode data block (ignored)
+          		csum+=byte;
+            	if(--count==0) state=5;
+            	break;
+            case 5: // opmode checksum
+            	if((csum^0xFF)==byte) exec_op(buf);
+            	else printf("[op mode] recv 0x%02X expected checksum 0x%02X\n",byte,csum^0xFF);
+            	state=0;
+            	break;
+            case 6: // fdc params
+          		if(byte=='\x0D'||byte=='\x0A') {
+          			if(*p_buf==0xFF) p_buf--;
+          			count=exec_fdc(buf);
+          			state=count?7:0;
+          			p_buf=&buf[4];
+          		} else if(byte==',') {
+          			if(++p_buf>&buf[3]) {
+          				printf("[fdc emu] recv too many parameters\n");
+          				state=0;
+          			}
+          		} else if(byte>='0'&&byte<='9') {
+          			if(*p_buf==0xFF)*p_buf=0;
+          			*p_buf*=10;
+          			*p_buf+=byte-'0';
+          		} else if(byte!=' ') {
+          			printf("[fdc emu] recv 0x%02X expected parameter data\n",byte);
+          			state=0;
+          		}
+            	break;
+            case 7: // fdc data
+            	*p_buf++=byte;
+            	if(--count==0) {
+            		exec_fdc_data(buf);
+            		state=0;
+            	}
+            	break;
+          }
+        }
+	    }
+	    stop=false;
+  	  if(sclose()) {
+  	    printf("serial port closed\n");
+  	  } else  {
+  	    printf("unable to close serial port\n");
+  	  }
+  	} else {
+  	  printf("unable to open serial port\n");
+  	}
+  }
+}
+
+
+//== ACTUAL FUN STUFF (WELL, GUESS THE EMULATOR WAS FUN TOO...) ======
+
 
 // return nof bytes used (excl header) by currently loaded pattern
-uint16_t calc_size() {
+static uint16_t calc_size() {
 	return ((ptn.height+1)>>1)+(((((ptn.width+3)>>2)*ptn.height)+1)>>1);
 }
 
 // decode header and store in global ptn
-bool decode_header(uint8_t index) {
+// return pattern number if successful
+static uint16_t decode_header(uint8_t index) {
 	uint8_t *hdr=&p_track[index*7];
 	if(hdr[0]!=0x55) {
 		ptn.pos = 0x7FFF-(index*7);
@@ -340,14 +558,14 @@ bool decode_header(uint8_t index) {
 		ptn.id =LSN(hdr[5])*100;
 		ptn.id+=MSN(hdr[6])*10; 
 		ptn.id+=LSN(hdr[6])*1;
-		return true;
+		if(ptn.id>=901&&ptn.id<=998) return ptn.id;
 	}
-	return false;
+	return 0;
 }
 
 // find and read pattern with specific pattern number/id
 // return true if found
-bool find_pattern(uint32_t ptn_id) {
+static bool find_pattern(uint32_t ptn_id) {
 	uint8_t n;
 	for(n=0;n<98;n++) {
 		if(decode_header(n)){
@@ -360,7 +578,7 @@ bool find_pattern(uint32_t ptn_id) {
 }
 
 // decode a pattern from memory and display on screen
-void decode_pattern() {
+static void decode_pattern() {
 	uint32_t stride,memo,nptr;
 	uint32_t x,y;
 	
@@ -385,7 +603,7 @@ void decode_pattern() {
 }
 
 // convert pattern id as string to int
-uint32_t str_to_id(char *str) {
+static uint32_t str_to_id(char *str) {
 	uint32_t out=0;
 	while(*str!=0){
 		if(*str<'0'||*str>'9') return 0;
@@ -396,7 +614,7 @@ uint32_t str_to_id(char *str) {
 	return(out);
 }
 
-// format memory
+// PUBLIC: format memory, reset track to 1
 void format() {
 	uint8_t n;
 	// set sector ids
@@ -418,16 +636,31 @@ void format() {
   	p_track[0x7FEA]=0x10; // 1xxx BCD (000=no pattern)
   }
   p_track=data;
+}
+
+// format with printout
+void cmd_format() {
+  format();
 	printf("memory initialized, track is 1\n");
 }
 
-// set current track
-void track() {
-	printf("current track is %i\n",((p_track-data)>>15)+1);
+// PUBLIC: set current track
+void set_track(uint8_t track) {
+  p_track=&data[(track)<<15];
+}
+
+// PUBLIC: get current track
+uint8_t get_track() {
+  return (p_track-data)>>15;
+}
+
+// prompt for set current track
+static void cmd_track() {
+	printf("current track is %i\n",get_track()+1);
 	printf("track #> ");
 	if(read_cmd("")) {
 		if(strlen(cmd)==1&&(cmd[0]=='1'||cmd[0]=='2')) {
-		  p_track=&data[(cmd[0]-'1')<<15];
+		  set_track(cmd[0]-'1');
 		  printf("track is now %s\n",cmd);
 		} else {
 			printf("need number between 1 and 2\n");
@@ -437,7 +670,7 @@ void track() {
 }
 
 // display patterns contained in memory
-void display() {
+static void display() {
 	uint8_t n;
 	uint32_t ptn_id;
 	for(n=0;n<98;n++) {
@@ -465,7 +698,7 @@ void display() {
 }
 
 // write out a disk image or floppy emulator folder
-void writeout() {
+static void writeout() {
 	uint8_t n;
 	char fn[256];
 	uint32_t temp;
@@ -524,7 +757,7 @@ void writeout() {
 }
 
 // read in a disk image or floppy emulator folder
-void readin() {
+static void readin() {
 	uint8_t n;
 	uint32_t ptn_id;
 	char fn[256];
@@ -549,7 +782,7 @@ void readin() {
 				} else {
 				 	printf("unable to open file %s\n",fn);
     		  if(halt)exit(1);
-    		  format();
+    		  cmd_format();
 				 	break;
 				}
 	  		//read sector
@@ -562,7 +795,7 @@ void readin() {
 				} else {
 				 	printf("unable to open file %s\n",fn);	
     		  if(halt)exit(1);
-    		  format();
+    		  cmd_format();
 				 	break;
 				}
 	  	}
@@ -604,43 +837,17 @@ void readin() {
 }
 
 // sample image, return true for "stitch" else false
-bool sample(uint8_t *p_img,uint8_t w,uint8_t x,uint8_t y) {
+static bool sample(uint8_t *p_img,uint8_t w,uint8_t x,uint8_t y) {
 	return p_img[y*w+x]<0x80;
 }
 
 // returns bcd number of column with specified value (ie 1, 10, 100, etc)
-uint8_t bcd_get(uint16_t n,uint16_t value) {
+static uint8_t bcd_get(uint16_t n,uint16_t value) {
 	return (n/value)%10;
 }
 
-// read image file
-void *image_read(FILE *f,uint16_t *w,uint16_t *h) {
-  void *p_img;
-  size_t bytes;
-  uint8_t temp[4];
-  // get fle size
-  fseek(f,0,SEEK_END);
-  bytes=ftell(f);
-  fseek(f,0,0);
-  // ensure header
-  if(bytes<4) return NULL;
-  // read header - 4 bytes
-  fread(temp,1,4,f);
-  // get size
-  *w=(temp[0]<<8)|temp[1];
-  *h=(temp[2]<<8)|temp[3];
-  // ensure valid size
-  if(*w==0||*h==0) return NULL;
-  // ensure correct size
-  if(bytes!=4+*w**h) return NULL;
-  // read picture - w*h bytes: top-down, left-right, 8bpp grayscale
-  p_img=malloc(*w**h);
-  fread(p_img,1,*w**h,f);
-  return p_img;
-}
-
-// add pattern to memory
-bool add_pattern(uint8_t *p_img,uint16_t w,uint16_t h) {
+// PUBLIC: add pattern to memory
+uint16_t add_pattern(uint8_t *p_img,uint16_t w,uint16_t h) {
 	uint8_t   n;
 	uint16_t  ptn_id;
 	uint32_t  temp;
@@ -678,7 +885,7 @@ bool add_pattern(uint8_t *p_img,uint16_t w,uint16_t h) {
 	data_bytes=((((w+3)>>2)*h)+1)>>1;
 	
 	// Check memory availability (should be 0x2AE, but leave some to be sure)
-	if(0x7FFF-(o_bottom+memo_bytes+data_bytes)>=0x02B0) {
+	if(0x7FFF-(o_bottom+memo_bytes+data_bytes)>=0x02B0&&ptn_id<999) {
 
   	// make memo data
   	p_data=malloc(memo_bytes);
@@ -717,9 +924,6 @@ bool add_pattern(uint8_t *p_img,uint16_t w,uint16_t h) {
     // free pattern data 
   	free(p_data);
 
-  	// free loaded pattern file
-  	free(p_img);
-  	
   	// write header
   	p_track[hdr_index*7+0]=o_bottom>>8;						  // byte 0
   	p_track[hdr_index*7+1]=o_bottom&0x00FF;					// byte 1
@@ -768,25 +972,43 @@ bool add_pattern(uint8_t *p_img,uint16_t w,uint16_t h) {
 		// check/decode written data, print out info
 		if(decode_header(hdr_index-1)) {
 		  printf("added #%i is %ix%i @%04X-0x%04X\n",ptn.id,ptn.width,ptn.height,ptn.offset,ptn.offset+calc_size()-1);
-		  return true;
+		  return ptn.id;
 		} else {
 		  printf("something bad happened\n");
-		  if(halt)exit(1);
 		}
-	} else {
-	  printf("not enough memory to store pattern\n");
-	  if(halt)exit(1);
 	}
-	return false;
+  if(halt)exit(0);
+	return 0;
 }
 
-// add raw file array
-bool add_raw(uint8_t p_img[]) {
-	return add_pattern(&p_img[4],(p_img[0]<<8)|p_img[1],(p_img[2]<<8)|p_img[3]);
+// PUBLIC: read image file
+void *image_read(FILE *f,uint16_t *w,uint16_t *h) {
+  void *p_img;
+  size_t bytes;
+  uint8_t temp[4];
+  // get fle size
+  fseek(f,0,SEEK_END);
+  bytes=ftell(f);
+  fseek(f,0,0);
+  // ensure header
+  if(bytes<4) return NULL;
+  // read header - 4 bytes
+  fread(temp,1,4,f);
+  // get size
+  *w=(temp[0]<<8)|temp[1];
+  *h=(temp[2]<<8)|temp[3];
+  // ensure valid size
+  if(*w==0||*h==0) return NULL;
+  // ensure correct size
+  if(bytes!=4+*w**h) return NULL;
+  // read picture - w*h bytes: top-down, left-right, 8bpp grayscale
+  p_img=malloc(*w**h);
+  fread(p_img,1,*w**h,f);
+  return p_img;
 }
 
 // add pattern from file
-void add_file() {	
+static void add_file() {	
 	uint8_t *p_img;
 	uint16_t w,h;
 	FILE *f;
@@ -800,10 +1022,15 @@ void add_file() {
 	  	fclose(f);
 	  	
 	  	// TODO: check size, what is machine maximum?
-	  	// if(w>???||h>???) p_img=NULL;
+	  	// if(w>???||h>???) {free(p_img);p_img=NULL;}
 
       if(p_img) {
-				add_pattern(p_img,w,h);
+				// add pattern to memory
+				if(!add_pattern(p_img,w,h)) {
+      	  printf("not enough memory to store pattern\n");
+				}
+      	// free loaded data
+      	free(p_img);
   		} else {
   		  printf("image does not have the correct format\n");
   		  if(halt)exit(1);
@@ -816,7 +1043,7 @@ void add_file() {
 }
 
 // print out and validate non-pattern information
-void info() {
+static void info() {
 	uint16_t last_pattern,sel_pattern;
 	uint8_t n;
 	uint8_t rep[5];
@@ -919,193 +1146,9 @@ void info() {
 	}
 }
 
-// op mode command executer
-void exec_op(uint8_t cmd[]) {
-	if(cmd[0]==0x08) {
-		printf("[op mode] recv 0x08 [fdc mode  ]\n");
-	} else {
-		printf("[op mode] recv 0x%02X bad/unsupported command\n",cmd[0]);
-	}
-}
-
-// serial write with error printing
-int32_t eswrite(void* p_write,uint16_t i_write) {
-	if(swrite(p_write,i_write)!=i_write) printf("unable to write to serial port\n");
-}
-
-char* fdc_name(uint8_t cmd) {
-	switch(cmd) {
-		case 'A':           return "read id   ";
-		case 'R':           return "read sect ";
-		case 'S':           return "find sect ";
-		case 'B': case 'C': return "write id  ";
-		case 'W': case 'X': return "write sect";
-		default: return "?";
-	}
-}
-
-// fdc mode command executer
-uint16_t exec_fdc(uint8_t cmd[0]) {
-	uint8_t ret[9]="80000000";
-	uint16_t count=0;
-	uint8_t n;
-	if(cmd[0]=='F'||cmd[0]=='G') {
-		// check length code (but format anyways)
-		if(cmd[1]!=5) printf("recv %02X [format    ] unsupported length code 0x%02X\n",cmd[0],cmd[1]);
-		// format memory
-		memset(data,0x00,80*1024);
-		for(n=0;n<80;n++) memset(&sids[n][0],0x00,12);
-		// respond ok
-		sprintf(ret,"00000000");
-		printf("[fdc emu] exec 0x%02X [format    ] resp: %s\n",cmd[0],ret);
-	} else {
-		if(cmd[1]==0xFF)cmd[1]=0; // physical sector default
-		if(cmd[2]==0xFF)cmd[2]=1; // logical sector default
-		// check sector validity
-		if(cmd[1]<80&&cmd[2]==1) {
-			// respond ok
-			sprintf(ret,"00%02X0000",cmd[1]);
-			// return
-			switch(cmd[0]) {
-				case 'A': case 'R':           count=   1; break;
-				case 'S': case 'B': case 'C': count=  12; break;
-				case 'W': case 'X':           count=1024; break;
-			}
-			printf("[fdc emu] recv 0x%02X [%s] resp: %s expect %i bytes\n",cmd[0],fdc_name(cmd[0]),ret,count);
-		} else printf("[fdc emu] recv 0x%02X [%s] resp: %s bad sector %i\\%i\n",cmd[0],fdc_name(cmd[0]),ret,cmd[1],cmd[2]);
-	}
-	// send response
-	eswrite(ret,8);
-	return count;
-}
-
-// fdc mode command+data executer
-void exec_fdc_data(uint8_t *cmd) {
-	uint8_t ret[9];
-	uint8_t *p_data=&cmd[4];
-	uint8_t n;
-	switch(cmd[0]) {
-		case 'A': 					// read sector id
-			if(*p_data=='\x0D') eswrite(&sids[cmd[1]][0],12);
-			printf("[fdc emu] exec 0x%02X [%s]\n",cmd[0],fdc_name(cmd[0]));
-			return;
-		case 'R': 					// read sector data
-			if(*p_data=='\x0D') eswrite(&data[(uint16_t)(cmd[1])<<10],1024);
-			printf("[fdc emu] exec 0x%02X [%s]\n",cmd[0],fdc_name(cmd[0]));
-			return;
-		case 'S': 					// find sector
-			sprintf(ret,"40000000"); // fail
-			for(n=0;n<80;n++) {
-				if(memcmp(&sids[n][0],p_data,12)==0) {
-					sprintf(ret,"00%02X0000",n); // success
-					break;
-				}
-			}
-			break;
-		case 'B': case 'C': // write sector id
-			memcpy(&sids[cmd[1]][0],p_data,12);
-			sprintf(ret,"00%02X0000",cmd[1]);
-			break;
-		case 'W': case 'X': // write sector data
-			memcpy(&data[(uint16_t)(cmd[1])<<10],p_data,1024);
-			sprintf(ret,"00%02X0000",cmd[1]);
-			break;
-	}
-	printf("[fdc emu] exec 0x%02X [%s] resp: %s\n",cmd[0],fdc_name(cmd[0]),ret);
-	eswrite(ret,8);
-}
-
-// emulate floppy drive
-void emulate() {
-  uint8_t byte;
-  uint8_t state,csum;
-  uint16_t count;
- 	uint8_t buf[1028],*p_buf;
- 	char fmt[]="9600,N,8,1";
-	printf("serial device> ");
-	if(read_cmd("")) {
-  	if(sopen(cmd)) {
-  	  printf("serial port open\n");
-  	  if(!sconfig(fmt)) {
-  	    printf("unable to configure serial port - ignoring\n");
-  	  }
-	    printf("serial port listening... (ctrl)^C/SIGINT to stop\n");
-    	// listen for ctrl^C
-    	signal(SIGINT, sigint);
-	    while(!stop) {
-        if(sread(&byte,1)==1) {
-          switch(state) {
-            case 0:
-              if(byte=='Z') state=1;
-              else if(byte!=0x00&&strchr("FGARSBCWX",byte)!=NULL) {
-              	p_buf=buf;
-              	*p_buf++=csum=byte;
-              	buf[1]=buf[2]=0xFF;
-              	state=6;
-              } else printf("[general] recv 0x%02X bad/unsupported command\n",byte);
-              break;
-            case 1: // opmode second preamble
-              if(byte=='Z') state=2;
-             	else printf("[op mode] recv 0x%02X expected preamble 0x5A\n",byte);
-             	break;
-            case 2: // opmode block format
-            	p_buf=buf;
-            	*p_buf++=csum=byte;
-            	state=3;
-            	break;
-            case 3: // opmode length of data block
-            	state=(count=byte)?4:5;
-            	csum+=byte;
-            	break;
-            case 4: // opmode data block (ignored)
-          		csum+=byte;
-            	if(--count==0) state=5;
-            	break;
-            case 5: // opmode checksum
-            	if((csum^0xFF)==byte) exec_op(buf);
-            	else printf("[op mode] recv 0x%02X expected checksum 0x%02X\n",byte,csum^0xFF);
-            	state=0;
-            	break;
-            case 6: // fdc params
-          		if(byte=='\x0D'||byte=='\x0A') {
-          			if(*p_buf==0xFF) p_buf--;
-          			count=exec_fdc(buf);
-          			state=count?7:0;
-          			p_buf=&buf[4];
-          		} else if(byte==',') {
-          			if(++p_buf>&buf[3]) {
-          				printf("[fdc emu] recv too many parameters\n");
-          				state=0;
-          			}
-          		} else if(byte>='0'&&byte<='9') {
-          			if(*p_buf==0xFF)*p_buf=0;
-          			*p_buf*=10;
-          			*p_buf+=byte-'0';
-          		} else if(byte!=' ') {
-          			printf("[fdc emu] recv 0x%02X expected parameter data\n",byte);
-          			state=0;
-          		}
-            	break;
-            case 7: // fdc data
-            	*p_buf++=byte;
-            	if(--count==0) {
-            		exec_fdc_data(buf);
-            		state=0;
-            	}
-            	break;
-          }
-        }
-	    }
-	    stop=false;
-  	  if(sclose()) {
-  	    printf("serial port closed\n");
-  	  } else  {
-  	    printf("unable to close serial port\n");
-  	  }
-  	} else {
-  	  printf("unable to open serial port\n");
-  	}
-  }
+// PUBLIC: add raw file array
+bool add_raw(uint8_t p_img[]) {
+	return add_pattern(&p_img[4],(p_img[0]<<8)|p_img[1],(p_img[2]<<8)|p_img[3]);
 }
 
 // do the nasty
@@ -1125,7 +1168,7 @@ void main(int argc,char**argv) {
 		if(argc)strcat(cmds," ");
 	}
 	// init memory
-	format();
+	cmd_format();
 	while(1) {
 		printf("> ");
 		if(read_cmd("q")) {
@@ -1149,9 +1192,9 @@ void main(int argc,char**argv) {
 			} else if(strcmp(cmd,"w")==0||strcmp(cmd,"write")==0) {
 				writeout();
 			} else if(strcmp(cmd,"t")==0||strcmp(cmd,"track")==0) {
-	  		track();
+	  		cmd_track();
 			} else if(strcmp(cmd,"f")==0||strcmp(cmd,"format")==0) {
-	  		format();
+	  		cmd_format();
 			} else if(strcmp(cmd,"a")==0||strcmp(cmd,"add")==0) {
 	  		add_file();
 			} else if(strcmp(cmd,"i")==0||strcmp(cmd,"info")==0) {
