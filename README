@@ -1,9 +1,19 @@
-Disk image manager for knitting machines:
-* Brother Electroknit KH-940
+Disk image manager for knitting machines.
 
-This program is capable of reading and writing:
+Machine capabilities:
+* Brother Electroknit KH-940
+* ! Your machine here?
+    Help out the project! :)
+
+Disk image capabilities:
 * 80k disk image files (our proprietary format)
-* Steve Conklin's Tandy PDD1 floppy drive emulator data folders.
+* Steve Conklin's Tandy PDD1 floppy drive emulator data folders
+
+Picture read capabilities:
+* raw (our proprietary format)
+
+Emulation capabilities:
+* PDD1 floppy drive FDC emulation mode (limited)
 
 == FILES =============================================================
 
@@ -17,6 +27,9 @@ disk_images/      Samples of disk images
   3.img           Seven very different designs (generated file)
 doc/              File/memory layout description
 ptn/              Sample patterns as both original bmp and raw
+
+win-cli-make.bat  Build CLI program (windows batch file)
+linux-cli.make.sh Build CLI program (linux shell script)
 
 == HOW TO USE ========================================================
 
