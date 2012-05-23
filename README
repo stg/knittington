@@ -1,4 +1,5 @@
-Disk image manager for Brother Electroknit KH-940 knitting machine.
+Disk image manager for knitting machines:
+* Brother Electroknit KH-940
 
 This program is capable of reading and writing:
 * 80k disk image files (our proprietary format)
@@ -6,16 +7,16 @@ This program is capable of reading and writing:
 
 == FILES =============================================================
 
-src/              Source files for the disk image manager
-sample/           Samples of disk images
+bin-X/            Binaries/executables for operating system X
+lib/              Source files for the disk image manager/emulator
+cli/              Source files for command line interface
+cpp_class/        Source files for C++ wrapper
+disk_images/      Samples of disk images
   1.img           Three small designs (actual data from machine)
   2.img           Two wide/tall designs (actual data from machine)
   3.img           Seven very different designs (generated file)
-doc/              File format documentation
-  mem_format.txt  Description of the KH-940 memory layout
-  img_format.txt  Description of the disk image formats
-  raw_format.txt  Description of pattern file format
-patterns/         Sample patterns as both bmp and raw
+doc/              File/memory layout description
+ptn/              Sample patterns as both original bmp and raw
 
 == HOW TO USE ========================================================
 
@@ -26,6 +27,7 @@ Typing ? or help will give
   ?/help      show this
   r/read      read in data from file
   w/write     write out data to file
+  m/machine   select knitting machine
   f/format    clear all tracks
   t/track     set working track
   a/add       add pattern to track
@@ -52,6 +54,16 @@ write - Write memory to image on disk
   See "read" command for more info.
 
 
+machine - Select knitting machine
+  This will show the currently selected machine as well as list
+  the available/supported machines.
+  
+  After listing, you are prompted to select a new machine and
+  this is selected by typing the short name of the machine
+  you wish to use, ie:
+    machine> kh940
+
+
 format - Clear computer ram contents
   This will delete everything currently contained in memory and
   ready the program for input of a new file.
@@ -65,7 +77,7 @@ track - Set working track
   info commands.
   
   Tracks are entered as a number between 1 and 2, ie:
-    track #> 1
+    track> 1
   
   
 add - Add a pattern to memory
@@ -79,7 +91,7 @@ show - Show patterns contained in memory
   This will list all available patterns and to into pattern
   display mode. In this mode you get the following promt:
   
-    pattern #>
+    pattern>
     
   instead of the regular one.
   
@@ -146,7 +158,7 @@ halt - Enable/disable halt on errors
 
 All commands can be executed from command line, for example:
 
-knit x a ptn/blocks.raw a ptn/inca.raw a ptn/text.raw w out/img/ q
+knit x a ptn/tile.raw a ptn/inca.raw a ptn/text.raw w test.img q
 
 Will do the following:
 
@@ -154,7 +166,7 @@ Will do the following:
 * Add ptn/blocks.raw as #901
 * Add ptn/inca.raw as #902
 * Add ptn/text.raw as #903
-* Write python floppy emulator folder out/img/
+* Write disk image to test.img
 * Quit
 
 In addition commands can also be piped in, or typed manually in
