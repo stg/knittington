@@ -11,12 +11,16 @@
 #include "emulate.h"
 #include "fileio.h"
 
-#define MACHINE_COUNT 1
+#define MACHINE_COUNT 2
 
 static machine_t mach[MACHINE_COUNT];
 static machine_t *p_mach=mach;
 static uint8_t data[81920];
 static uint8_t sids[960];
+
+// Machine initialisers
+void kh930_init(machine_t *p_machine,uint8_t *p_disk_data,uint8_t *p_disk_sids);
+void kh940_init(machine_t *p_machine,uint8_t *p_disk_data,uint8_t *p_disk_sids);
 
 // Initialize machine and add it to list of machines 
 static void machine_add(const char *p_code,void(*fp_init)(machine_t*,uint8_t*,uint8_t*)) {
@@ -27,6 +31,7 @@ static void machine_add(const char *p_code,void(*fp_init)(machine_t*,uint8_t*,ui
 // Initialize all machines
 void machine_init() {
 	machine_add("kh940",kh940_init);
+	machine_add("kh930",kh930_init);
 }
 
 // Retrieve machine descriptor

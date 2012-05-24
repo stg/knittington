@@ -154,7 +154,7 @@ static void cmd_show() {
 	uint8_t *p_img;
 	for(n=0;n<98;n++) {
 		if(p_mach->decode_header(&desc,n)) {
-			printf("pattern %i is %ix%i @%04X\n",desc.id,desc.width,desc.height,desc.pattern);
+			printf("pattern %i is %ix%i @0x%04X\n",desc.id,desc.width,desc.height,desc.pattern);
 		}
 	}
 	while(1) {
@@ -208,7 +208,7 @@ static void cmd_add() {
 		  		  }
 					}
 	      	if(find_pattern(&desc,ptn_id) ) {
-	      		printf("added pattern %i as %ix%i @%04X\n",desc.id,desc.width,desc.height,desc.pattern);
+	      		printf("added pattern %i as %ix%i @0x%04X\n",desc.id,desc.width,desc.height,desc.pattern);
 	      	} else {
 	      		printf("pattern was added but can not be found\n");
 	      		printf("memory may be corrupted, format suggested\n");

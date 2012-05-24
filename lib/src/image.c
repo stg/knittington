@@ -9,10 +9,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "image.h"
+#include "string.h"
 
 // allocate memory for image
 uint8_t *image_alloc(uint16_t w,uint16_t h) {
-	return (uint8_t*)malloc(w*h);
+	uint8_t *p_image=(uint8_t*)malloc(w*h);
+	memset(p_image,0x00,w*h);
+	return p_image;
 }
 
 // get pixel from image

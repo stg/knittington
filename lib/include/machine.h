@@ -37,9 +37,6 @@ typedef struct {
   uint16_t track_count;
 } machine_t;
 
-// Machine initialisers
-void kh940_init(machine_t *p_machine,uint8_t *p_disk_data,uint8_t *p_disk_sids);
-
 // Initialize all machines
 // Must be called before machine_Get
 void machine_init();
