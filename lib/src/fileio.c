@@ -46,7 +46,7 @@ bool disk_write(char *path,uint8_t *data, uint8_t *sids) {
   	f=fopen(path,"wb");
   	if(f) {
   		fwrite(data,1,81920,f);
-  		fwrite(sids,1,940,f);
+  		fwrite(sids,1,960,f);
   		return true;
   	}
   }
@@ -92,7 +92,7 @@ bool disk_read(char *path,uint8_t *data,uint8_t *sids) {
 	  	if(ftell(f)==81920+960) {
 	  		fseek(f,0,0);
 	  		fread(data,1,81920,f);
-  			fread(sids,1,940,f);
+  			fread(sids,1,960,f);
 	  		fclose(f);
 	  		return true;
 	  	}
