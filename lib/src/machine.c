@@ -1,6 +1,8 @@
 // Source file for machine definitions
 //
-// Currently supports only Brother Electroknit KH-940
+// Currently supports:
+// * Brother Electroknit KH-940
+// * Brother Electroknit KH-930
 //
 // senseitg@gmail.com 2012-May-22
 
