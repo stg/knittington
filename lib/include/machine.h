@@ -52,7 +52,7 @@ bool machine_load(char *path);
 bool machine_save(char *path);
 
 // Start floppy drive emulator
-void machine_emulate(char *device,FILE *verbose);
+bool machine_emulate(char *device,FILE *verbose);
 
 #ifdef __cplusplus
 }

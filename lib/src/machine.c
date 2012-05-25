@@ -53,6 +53,6 @@ bool machine_save(char *path) {
 }
 
 // Start the emulator
-void machine_emulate(char *device,FILE *verbose) {
-	emulate(device,data,sids,verbose);
+bool machine_emulate(char *device,FILE *verbose) {
+	return emulate(device,data,sids,verbose);
 }

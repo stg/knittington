@@ -7,13 +7,14 @@ extern "C" {
 #endif
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 
 // start emulate floppy drive
 // device specifies device for sopen, see serial.c/h
 // verbose specifies FILE* for verbose output, such as stdout
 // emulate is blocking
-void emulate(char *device,uint8_t *p_sect_data,uint8_t *p_sids_data,FILE *verbose);
+bool emulate(char *device,uint8_t *p_sect_data,uint8_t *p_sids_data,FILE *verbose);
 
 // stop emulating floppy drive
 // since emulate is blocking, this must be called from a separate process

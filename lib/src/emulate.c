@@ -146,7 +146,7 @@ static void sigint(int z) {
 }
 
 // start emulator
-void emulate(char *device,uint8_t *p_sect_data,uint8_t *p_sids_data,FILE *verbose) {
+bool emulate(char *device,uint8_t *p_sect_data,uint8_t *p_sids_data,FILE *verbose) {
   uint8_t byte;
   uint8_t state,csum;
   uint16_t count;
@@ -239,4 +239,5 @@ void emulate(char *device,uint8_t *p_sect_data,uint8_t *p_sids_data,FILE *verbos
 	} else {
 	  if(p_out)fprintf(p_out,"unable to open serial port\n");
   }
+  return stop;
 }
