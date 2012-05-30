@@ -23,6 +23,7 @@ enum {
 	VIEW_TOP,
 	VIEW_MACH,
 	VIEW_ADD,
+	VIEW_EDIT,
 	VIEW_EMU,
 	VIEW_MSG
 };
@@ -55,6 +56,11 @@ enum {
 };
 
 enum {
+	EDIT_OK,
+	EDIT_COUNT
+};
+
+enum {
 	EMU_LIST,
 	EMU_OK,
 	EMU_CANCEL,
@@ -68,8 +74,8 @@ enum {
 };
 
 // ui views
-static view_t  *vtop,*vmach,*vadd,*vemu,*vmsg;
-static uiobj_t *top[TOP_COUNT],*mach[MACH_COUNT],*add[ADD_COUNT],*emu[EMU_COUNT],*msg[MSG_COUNT];
+static view_t  *vtop,*vmach,*vadd,*vedit,*vemu,*vmsg;
+static uiobj_t *top[TOP_COUNT],*mach[MACH_COUNT],*add[ADD_COUNT],*edit[EDIT_COUNT],*emu[EMU_COUNT],*msg[MSG_COUNT];
 
 // currently selected view
 static uint8_t view=VIEW_TOP;
@@ -302,6 +308,23 @@ static bool add_event(SDL_Event *event) {
 	return false;
 }
 
+// event handler for edit pattern view
+static bool edit_event(SDL_Event *event) {
+	uiobj_t *p_ui;
+	p_ui=event->user.data1;
+	switch( event->type ) {
+	  case SDL_QUIT:
+	    quit = 1; // Set time to quit
+	    return true;
+	  case UI_CLICK:
+	  	if(p_ui==edit[EDIT_OK]) {
+	  	  view=VIEW_TOP;
+	  	  return true;
+	    }
+	}
+	return false;
+}
+
 // handles messages from emulator
 static void emu_message(uint8_t event,uint8_t data) {
 	char msg[40];
@@ -506,6 +529,9 @@ int main( int argc, char *argv[] ) {
 	vadd->ok=add[ADD_OK];
 	vadd->cancel=add[ADD_CANCEL];
 
+	// build edit pattern view
+	vedit=ui_fsview();
+
 	// build start emulator view
 	vemu=ui_view(30,15,"SELECT COMMUNICATIONS PORT");
 	emu[EMU_LIST]   =ui_add(vemu,ui_list(0,0,27,12,"PORTS"));
@@ -547,6 +573,8 @@ int main( int argc, char *argv[] ) {
 				break;
 			case VIEW_ADD:  ui_display(vadd,add_event);
 				break;
+			case VIEW_EDIT: ui_display(vedit,edit_event);
+				break;
 			case VIEW_EMU:  ui_display(vemu,emu_event);
 				break;
 			case VIEW_MSG:  ui_display(vmsg,msg_event);
@@ -558,7 +586,9 @@ int main( int argc, char *argv[] ) {
 	ui_free_view(vtop);
 	ui_free_view(vmach);
 	ui_free_view(vadd);
+	ui_free_view(vedit);
 	ui_free_view(vemu);
+	ui_free_view(vmsg);
 	ui_free();
 	
 	
