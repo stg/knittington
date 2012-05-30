@@ -138,8 +138,8 @@ static bool top_event(SDL_Event *event) {
 	switch( event->type ) {
 #ifdef SDL2
 		case SDL_DROPFILE:
-			if(event->drop.file) {
-  			if(p_mach) {
+			if(p_mach) {
+  			if(event->drop.file) {
   			  if(image_loadpicture(event->drop.file)) {
   			    if(p_mach->size_check(image_width(),image_height())) {
   			      p_item=ui_list_add(top[TOP_LIST],"PPP IS WWWXHHH",4+image_width()*image_height());
@@ -155,20 +155,20 @@ static bool top_event(SDL_Event *event) {
   			  } else {
   			    stat_format++;
   			  }
-  			} else {
-    			ui_field_add(msg[MSG_TEXT],"NOT READY TO ACCEPT IMAGES\nAT THIS TIME. PLEASE SELECT\nMACHINE USING FORMAT FIRST.");
+    		} else {
+    		  sprintf(text,"SUCCESSFULLY ADDED: %i\nTOO BIG FOR MACHINE: %i\nUNRECOGNIZED FORMAT: %i",stat_add,stat_size,stat_format);
+    		  ui_field_add(msg[MSG_TEXT],text);
+    		  stat_add=0;
+    		  stat_size=0;
+    		  stat_format=0;
     			view=VIEW_MSG;
     			return true;
-  			}
-  		} else {
-  		  sprintf(text,"SUCCESSFULLY ADDED: %i\nTOO BIG FOR MACHINE: %i\nUNRECOGNIZED FORMAT: %i",stat_add,stat_size,stat_format);
-  		  ui_field_add(msg[MSG_TEXT],text);
-  		  stat_add=0;
-  		  stat_size=0;
-  		  stat_format=0;
+    		}
+			} else {
+  			ui_field_add(msg[MSG_TEXT],"NOT READY TO ACCEPT IMAGES\nAT THIS TIME. PLEASE SELECT\nMACHINE USING FORMAT FIRST.");
   			view=VIEW_MSG;
   			return true;
-  		}
+			}
 	  	break;
 #endif
 	  case SDL_QUIT:
