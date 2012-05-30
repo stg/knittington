@@ -213,8 +213,9 @@ static void list_draw(uiobj_t *p_ui) {
 		p_item=ui_list_index2item(p_ui,p_list->top);
 		r_white(p_view->x+p_ui->x+1,p_view->y+p_ui->y+1,p_ui->w-2,p_ui->h-2);
 		for(y=0;(y<p_ui->h-2)&&p_item;y++) {
-			if(strlen(p_item->text)>=p_ui->w-2) {
+			if(strlen(p_item->text)>p_ui->w-2) {
 				memcpy(p_text,p_item->text,p_ui->w-2);
+    		p_text[p_ui->w-3]='ù';
 			} else {
 				strcpy(p_text,p_item->text);
 			}

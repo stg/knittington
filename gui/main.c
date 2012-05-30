@@ -475,6 +475,7 @@ void add_port(char *p_name,char *p_device) {
 int main( int argc, char *argv[] ) {
 	uint8_t n;
 	listitem_t *p_item;
+	char *p_text;
 
 	// initialize sdl
 	if(SDL_Init(SDL_INIT_VIDEO)) return 1;
@@ -531,6 +532,8 @@ int main( int argc, char *argv[] ) {
 
 	// build edit pattern view
 	vedit=ui_fsview();
+	//edit[EDIT_GRID]=ui_add(vedit,ui_grid(1,1,38,23));
+	edit[EDIT_OK]=ui_add(vedit,ui_button(18,26,"OK"));
 
 	// build start emulator view
 	vemu=ui_view(30,15,"SELECT COMMUNICATIONS PORT");
@@ -553,7 +556,12 @@ int main( int argc, char *argv[] ) {
 	for(n=0;n<255;n++) {
 		p_mach=machine_get(n);
 		if(p_mach==NULL)break;
-		p_item=ui_list_add(mach[MACH_LIST],p_mach->code,strlen(p_mach->name)+1);
+		p_text=malloc(strlen(p_mach->code)+strlen(p_mach->name)+2);
+		strcpy(p_text,p_mach->code);
+		strcat(p_text," ");
+		strcat(p_text,p_mach->name);
+		p_item=ui_list_add(mach[MACH_LIST],p_text,strlen(p_mach->name)+1);
+		free(p_text);
 		strcpy(p_item->data,p_mach->name);
 	}
 	// TODO: remove
