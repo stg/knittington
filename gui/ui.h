@@ -20,6 +20,16 @@ typedef struct {
 } list_t;
 
 typedef struct {
+  uint16_t l;
+  uint16_t t;
+  uint16_t x;
+  uint16_t y;
+  uint16_t w;
+  uint16_t h;
+  uint8_t *data;
+} grid_t;
+
+typedef struct {
 	char *caption;
 } button_t;
 
@@ -63,6 +73,7 @@ enum {
 	UI_LIST='L',
 	UI_FIELD='F',
 	UI_TEXT='T',
+	UI_GRID='G',
 	UI_END=' '
 };
 
@@ -80,6 +91,9 @@ void capstr(char *p_text);
 view_t*     ui_fsview();
 view_t*     ui_view(uint8_t w,uint8_t h,char *caption);
 void        ui_free_view(view_t *p_view);
+
+uiobj_t*    ui_grid(uint8_t x,uint8_t y,uint8_t w,uint8_t h);
+void        ui_grid_set(uiobj_t *p_ui,void *p_data,uint16_t w,uint16_t h);
 
 uiobj_t*    ui_text(uint8_t x,uint8_t y,uint8_t w,char *caption);
 void        ui_text_set(uiobj_t *p_ui,char *p_text);

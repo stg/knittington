@@ -2,13 +2,17 @@
 #include <stdbool.h>
 #ifdef SDL2
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_keycode.h>
 #else
 #include <SDL/SDL.h>
+#define SDL_Keycode SDLKey
 #endif
 #include "renderer.h"
 #include "ui.h"
 
 /** GENERICS ********************************************************/
+
+static bool was_fullscreen=true;
 
 SDL_mutex *mx_ui;
 
@@ -69,6 +73,329 @@ view_t* ui_view(uint8_t w,uint8_t h,char *caption) {
 	p_obj->ok=NULL;
 	p_obj->cancel=NULL;
 	return p_obj;
+}
+
+/** GRID EDITOR *****************************************************/
+
+uiobj_t* ui_grid(uint8_t x,uint8_t y,uint8_t w,uint8_t h) {
+	uiobj_t *p_ui=malloc(sizeof(uiobj_t));
+	grid_t *p_obj=malloc(sizeof(grid_t));
+	p_ui->x=x;
+	p_ui->y=y;
+	p_ui->w=w;
+	p_ui->h=h;
+	p_obj->l=0;
+	p_obj->t=0;
+	p_obj->x=0;
+	p_obj->y=0;
+	p_obj->data=NULL;
+	p_ui->type=UI_GRID;
+	p_ui->obj=p_obj;
+	return p_ui;
+}
+
+void ui_grid_set(uiobj_t *p_ui,void *p_data,uint16_t w,uint16_t h) {
+  grid_t *p_grid=p_ui->obj;
+	p_grid->data=p_data;
+	p_grid->l=0;
+	p_grid->t=0;
+	p_grid->x=0;
+	p_grid->y=0;
+	p_grid->w=w;
+	p_grid->h=h;
+	p_ui->state=1;
+}
+
+static bool grid_cset(uiobj_t *p_ui,int16_t x,int16_t y,char c,uint8_t bg) {
+  grid_t *p_grid=p_ui->obj;
+	view_t *p_view=p_ui->view;
+	uint8_t ax,ay;
+	if((x<0)||(x-(int16_t)p_grid->l>=0)) {
+	  if((y<0)||(y-(int16_t)p_grid->t>=0)) {
+	    if((x<0)||((x-(int16_t)p_grid->l)<p_ui->w)) {
+  	    if((y<0)||((y-(int16_t)p_grid->t)<p_ui->h)) {
+  	      if(x==-1) {
+  	        ax=p_ui->x+p_view->x-1;
+  	      } else if(x==-2) {
+  	        ax=p_ui->x+p_view->x+p_ui->w;
+  	      } else {
+      	    ax=x+p_ui->x+p_view->x-p_grid->l;
+  	      }
+  	      if(y==-1) {
+  	        ay=p_ui->y+p_view->y-1;
+  	      } else if(y==-2) {
+  	        ay=p_ui->y+p_view->y+p_ui->h;
+  	      } else {
+      	    ay=y+p_ui->y+p_view->y-p_grid->t;
+      	  }
+  	      r_char(ax,ay,c,0,bg);
+  	      return true;
+  	    }
+	    }
+	  }
+	}
+	return false;
+}
+
+static void grid_focus(uiobj_t *p_ui) {
+/*  grid_t *p_grid=p_ui->obj;
+	view_t *p_view=p_ui->view;
+  if(p_grid->data) {
+    r_cins(p_ui->x+p_view->x-p_grid->l+p_grid->x*3+2,p_ui->y+p_view->y-p_grid->t+p_grid->y*3+2);
+  }
+*/
+  grid_t *p_grid=p_ui->obj;
+	view_t *p_view=p_ui->view;
+  if(p_grid->data) {
+    r_cins(p_ui->x+p_view->x-p_grid->l+p_grid->x*2+1,p_ui->y+p_view->y-p_grid->t+p_grid->y*2+1,1);
+  }
+
+}
+
+static void grid_draw(uiobj_t *p_ui) {
+/*  grid_t *p_grid=p_ui->obj;
+	view_t *p_view=p_ui->view;
+	uint16_t x,y;
+	uint8_t bg;
+  if(p_ui->state&9) {
+    r_white(p_ui->x+p_view->x-1,p_ui->y+p_view->y-1,p_ui->w+2,p_ui->h+2);
+    if(p_grid->data) {
+      for(y=1;y<3*p_grid->h+1;y++) {
+        grid_cset(p_ui,0,y,'h',0);
+        grid_cset(p_ui,p_grid->w*3+1,y,'g',0);
+        if(((y-1)%15)==0) {
+          grid_cset(p_ui,-1,y  ,'0'+(((y-1)/300)%10),0);
+          grid_cset(p_ui,-1,y+1,'0'+(((y-1)/ 30)%10),0);
+          grid_cset(p_ui,-1,y+2,'0'+(((y-1)/  3)%10),0);
+          grid_cset(p_ui,-2,y  ,'0'+(((y-1)/300)%10),0);
+          grid_cset(p_ui,-2,y+1,'0'+(((y-1)/ 30)%10),0);
+          grid_cset(p_ui,-2,y+2,'0'+(((y-1)/  3)%10),0);
+        }
+      }
+      for(x=1;x<3*p_grid->w+1;x++) {
+        grid_cset(p_ui,x,0,'b',0);
+        grid_cset(p_ui,x,p_grid->h*3+1,'y',0);
+        if(((x-1)%15)==0) {
+          grid_cset(p_ui,x  ,-1,'0'+(((x-1)/300)%10),0);
+          grid_cset(p_ui,x+1,-1,'0'+(((x-1)/ 30)%10),0);
+          grid_cset(p_ui,x+2,-1,'0'+(((x-1)/  3)%10),0);
+          grid_cset(p_ui,x  ,-2,'0'+(((x-1)/300)%10),0);
+          grid_cset(p_ui,x+1,-2,'0'+(((x-1)/ 30)%10),0);
+          grid_cset(p_ui,x+2,-2,'0'+(((x-1)/  3)%10),0);
+        }
+      }
+      grid_cset(p_ui,0,0,'m',0);
+      grid_cset(p_ui,p_grid->w*3+1,0,'c',0);
+      grid_cset(p_ui,0,p_grid->h*3+1,'r',0);
+      grid_cset(p_ui,p_grid->w*3+1,p_grid->h*3+1,'i',0);
+      for(y=0;y<p_grid->h;y++) {
+        for(x=0;x<p_grid->w;x++) {
+          bg=(p_grid->data[x+y*p_grid->w]<0x80)?1:0;
+          grid_cset(p_ui,x*3+1,y*3+1,'t',bg);
+          grid_cset(p_ui,x*3+2,y*3+1,'y',bg);
+          grid_cset(p_ui,x*3+3,y*3+1,'u',bg);
+          grid_cset(p_ui,x*3+1,y*3+2,'g',bg);
+          grid_cset(p_ui,x*3+2,y*3+2,'ñ',bg);
+          grid_cset(p_ui,x*3+3,y*3+2,'h',bg);
+          grid_cset(p_ui,x*3+1,y*3+3,'v',bg);
+          grid_cset(p_ui,x*3+2,y*3+3,'b',bg);
+          grid_cset(p_ui,x*3+3,y*3+3,'n',bg);
+        }
+      }
+      if(p_grid->l) for(y=0;y<p_ui->h-0;y++) {
+        r_char(p_ui->x+p_view->x,p_ui->y+p_view->y+y,'a',0,0);
+      }
+      if(p_grid->w*3+2-p_grid->l>p_ui->w) for(y=0;y<p_ui->h-0;y++) {
+        r_char(p_ui->x+p_view->x+p_ui->w-1,p_ui->y+p_view->y+y,'d',0,0);
+      }
+      if(p_grid->t) for(x=0;x<p_ui->w-0;x++) {
+        r_char(p_ui->x+p_view->x+x,p_ui->y+p_view->y,'w',0,0);
+      }
+      if(p_grid->h*3+2-p_grid->t>p_ui->h) for(x=0;x<p_ui->w-0;x++) {
+        r_char(p_ui->x+p_view->x+x,p_ui->y+p_view->y+p_ui->h-1,'s',0,0);
+      }
+      if(p_ui->state&8) {
+        r_done(p_ui->x+p_view->x-1,p_ui->y+p_view->y-1,p_ui->w+2,p_ui->h+2);
+      }
+    }
+  }
+  if(p_ui->state&4) {
+    grid_focus(p_ui);
+  }
+  p_ui->state=0;
+*/
+  grid_t *p_grid=p_ui->obj;
+	view_t *p_view=p_ui->view;
+	uint16_t x,y;
+	uint8_t bg;
+  if(p_ui->state&9) {
+    r_white(p_ui->x+p_view->x-1,p_ui->y+p_view->y-1,p_ui->w+2,p_ui->h+2);
+    if(p_grid->data) {
+      for(y=1;y<2*p_grid->h+1;y++) {
+        grid_cset(p_ui,0,y,'h',0);
+        grid_cset(p_ui,p_grid->w*2+1,y,'g',0);
+        if(((y-1)%10)==0) {
+          grid_cset(p_ui,-1,y  ,'0'+(((y-1)/200)%10),0);
+          grid_cset(p_ui,-1,y+1,'0'+(((y-1)/ 20)%10),0);
+          grid_cset(p_ui,-1,y+2,'0'+(((y-1)/  2)%10),0);
+          grid_cset(p_ui,-2,y  ,'0'+(((y-1)/200)%10),0);
+          grid_cset(p_ui,-2,y+1,'0'+(((y-1)/ 20)%10),0);
+          grid_cset(p_ui,-2,y+2,'0'+(((y-1)/  2)%10),0);
+        }
+      }
+      for(x=1;x<2*p_grid->w+1;x++) {
+        grid_cset(p_ui,x,0,'b',0);
+        grid_cset(p_ui,x,p_grid->h*2+1,'y',0);
+        if(((x-1)%10)==0) {
+          grid_cset(p_ui,x  ,-1,'0'+(((x-1)/200)%10),0);
+          grid_cset(p_ui,x+1,-1,'0'+(((x-1)/ 20)%10),0);
+          grid_cset(p_ui,x+2,-1,'0'+(((x-1)/  2)%10),0);
+          grid_cset(p_ui,x  ,-2,'0'+(((x-1)/200)%10),0);
+          grid_cset(p_ui,x+1,-2,'0'+(((x-1)/ 20)%10),0);
+          grid_cset(p_ui,x+2,-2,'0'+(((x-1)/  2)%10),0);
+        }
+      }
+      grid_cset(p_ui,0,0,'m',0);
+      grid_cset(p_ui,p_grid->w*2+1,0,'c',0);
+      grid_cset(p_ui,0,p_grid->h*2+1,'r',0);
+      grid_cset(p_ui,p_grid->w*2+1,p_grid->h*2+1,'i',0);
+      for(y=0;y<p_grid->h;y++) {
+        for(x=0;x<p_grid->w;x++) {
+          bg=(p_grid->data[x+y*p_grid->w]<0x80)?1:0;
+          grid_cset(p_ui,x*2+1,y*2+1,'t',bg);
+          grid_cset(p_ui,x*2+2,y*2+1,'u',bg);
+          grid_cset(p_ui,x*2+1,y*2+2,'v',bg);
+          grid_cset(p_ui,x*2+2,y*2+2,'n',bg);
+        }
+      }
+      if(p_grid->l) for(y=0;y<p_ui->h-0;y++) {
+        r_char(p_ui->x+p_view->x,p_ui->y+p_view->y+y,'a',0,0);
+      }
+      if(p_grid->w*2+2-p_grid->l>p_ui->w) for(y=0;y<p_ui->h-0;y++) {
+        r_char(p_ui->x+p_view->x+p_ui->w-1,p_ui->y+p_view->y+y,'d',0,0);
+      }
+      if(p_grid->t) for(x=0;x<p_ui->w-0;x++) {
+        r_char(p_ui->x+p_view->x+x,p_ui->y+p_view->y,'w',0,0);
+      }
+      if(p_grid->h*2+2-p_grid->t>p_ui->h) for(x=0;x<p_ui->w-0;x++) {
+        r_char(p_ui->x+p_view->x+x,p_ui->y+p_view->y+p_ui->h-1,'s',0,0);
+      }
+      if(p_ui->state&8) {
+        r_done(p_ui->x+p_view->x-1,p_ui->y+p_view->y-1,p_ui->w+2,p_ui->h+2);
+      }
+    }
+  }
+  if(p_ui->state&4) {
+    grid_focus(p_ui);
+  }
+  p_ui->state=0;
+}
+
+static bool grid_key(uiobj_t *p_ui,SDL_Keycode sym) {
+/*
+  grid_t *p_grid=p_ui->obj;
+  switch(sym) {
+    case SDLK_LEFT:
+      if(p_grid->x>0) {
+        p_grid->x--;
+        p_ui->state|=4;
+      }
+      break;
+    case SDLK_RIGHT:
+      if(p_grid->x<p_grid->w-1) {
+        p_grid->x++;
+        p_ui->state|=4;
+      }
+      break;
+    case SDLK_UP:
+      if(p_grid->y>0) {
+        p_grid->y--;
+        p_ui->state|=4;
+      }
+      break;
+    case SDLK_DOWN:
+      if(p_grid->y<p_grid->h-1) {
+        p_grid->y++;
+        p_ui->state|=4;
+      }
+      break;
+    case SDLK_SPACE:
+      p_grid->data[p_grid->x+p_grid->y*p_grid->w]=p_grid->data[p_grid->x+p_grid->y*p_grid->w]<0x80?0xFF:0x00;
+      p_ui->state|=8;
+      return true;
+  }
+  
+  if((p_grid->x*3+2)-2<p_grid->l) {
+    p_grid->l=(p_grid->x*3+2)-2;
+    p_ui->state|=8;
+  } else if( (p_grid->x*3+2)+3>p_grid->l+p_ui->w ) {
+    p_grid->l=(p_grid->x*3+2)+3-p_ui->w;
+    p_ui->state|=8;
+  }
+
+  if((p_grid->y*3+2)-2<p_grid->t) {
+    p_grid->t=(p_grid->y*3+2)-2;
+    p_ui->state|=8;
+  } else if( (p_grid->y*3+2)+3>p_grid->t+p_ui->h ) {
+    p_grid->t=(p_grid->y*3+2)+3-p_ui->h;
+    p_ui->state|=8;
+  }
+  
+  
+  return false;
+*/
+  grid_t *p_grid=p_ui->obj;
+  switch(sym) {
+    case SDLK_LEFT:
+      if(p_grid->x>0) {
+        p_grid->x--;
+        p_ui->state|=4;
+      }
+      break;
+    case SDLK_RIGHT:
+      if(p_grid->x<p_grid->w-1) {
+        p_grid->x++;
+        p_ui->state|=4;
+      }
+      break;
+    case SDLK_UP:
+      if(p_grid->y>0) {
+        p_grid->y--;
+        p_ui->state|=4;
+      }
+      break;
+    case SDLK_DOWN:
+      if(p_grid->y<p_grid->h-1) {
+        p_grid->y++;
+        p_ui->state|=4;
+      }
+      break;
+    case SDLK_SPACE:
+      p_grid->data[p_grid->x+p_grid->y*p_grid->w]=p_grid->data[p_grid->x+p_grid->y*p_grid->w]<0x80?0xFF:0x00;
+      p_ui->state|=8;
+     	break;
+    default:
+    	return true;
+  }
+  
+  if((p_grid->x*2+2)-2<p_grid->l) {
+    p_grid->l=(p_grid->x*2+2)-2;
+    p_ui->state|=8;
+  } else if( (p_grid->x*2+2)+2>p_grid->l+p_ui->w ) {
+    p_grid->l=(p_grid->x*2+2)+2-p_ui->w;
+    p_ui->state|=8;
+  }
+
+  if((p_grid->y*2+2)-2<p_grid->t) {
+    p_grid->t=(p_grid->y*2+2)-2;
+    p_ui->state|=8;
+  } else if( (p_grid->y*2+2)+2>p_grid->t+p_ui->h ) {
+    p_grid->t=(p_grid->y*2+2)+2-p_ui->h;
+    p_ui->state|=8;
+  }
+  
+  return sym=SDLK_SPACE;
+
 }
 
 /** TEXT INPUT ******************************************************/
@@ -136,10 +463,10 @@ static void text_draw(uiobj_t *p_ui) {
 static void text_focus(uiobj_t *p_ui) {
 	text_t *p_text=p_ui->obj;
 	view_t *p_view=p_ui->view;
-	r_cins(p_view->x+p_ui->x+strlen(p_text->caption)+strlen(p_text->text),p_view->y+p_ui->y);
+	r_cins(p_view->x+p_ui->x+strlen(p_text->caption)+strlen(p_text->text),p_view->y+p_ui->y,0);
 }
 
-static bool text_key(uiobj_t *p_ui,uint8_t sym) {
+static bool text_key(uiobj_t *p_ui,SDL_Keycode sym) {
 	text_t *p_text=p_ui->obj;
 	char key[2];
 	if((sym>=SDLK_0&&sym<=SDLK_9)||sym==SDLK_BACKSPACE) {
@@ -524,6 +851,8 @@ static void ui_refresh(view_t *p_view) {
 				break;
 			case UI_TEXT:   text_draw(p_ui);
 				break;
+			case UI_GRID:   grid_draw(p_ui);
+				break;
 		}
 		p_ui=p_ui->next;
 	}
@@ -548,7 +877,7 @@ static void ui_focusprev(view_t *p_view) {
 		if(p_ui&&p_ui!=p_view->focus) {
 			if(p_ui->enabled) {
 				switch(p_ui->type) {
-					case UI_TEXT:
+					case UI_TEXT: case UI_GRID:
 						p_found=p_ui;
 						break;
 				}
@@ -560,6 +889,9 @@ static void ui_focusprev(view_t *p_view) {
 		switch(p_found->type) {
 			case UI_TEXT:
 				text_focus(p_found);
+				break;
+			case UI_GRID:
+				grid_focus(p_found);
 				break;
 		}
 	}
@@ -577,6 +909,10 @@ static void ui_focusnext(view_t *p_view) {
 					case UI_TEXT:
 						p_view->focus=p_ui;
 						text_focus(p_ui);
+						return;
+					case UI_GRID:
+						p_view->focus=p_ui;
+						grid_focus(p_ui);
 						return;
 				}
 			}
@@ -611,17 +947,21 @@ void ui_display(view_t *p_view,bool(*events)(SDL_Event *e)) {
 	if(!p_view->fullscreen) {
 		r_white(p_view->x-3,p_view->y-3,p_view->w+6,p_view->h+6);
 		r_box(p_view->x-2,p_view->y-2,p_view->w+4,p_view->h+4,p_view->caption,0,3);
-	} else if(p_view->state==1) {
-		r_white(0,0,40,30);
-		p_view->state=2;
+	} else {
+ 		r_white(0,0,40,30);
+	  if(was_fullscreen) {
+	    p_view->state=0;
+	  } else {
+  		p_view->state=1;
+	  }
 	}
+	was_fullscreen=p_view->fullscreen;
 	while(!done) {
 		SDL_mutexP(mx_ui);
 		ui_refresh(p_view);
-		if(p_view->fullscreen&p_view->state==0) p_view->state=1;
-		if(p_view->state==2) {
+		if(p_view->state==1) {
 			r_done(0,0,40,30);
-			p_view->state=1;
+			p_view->state=2;
 		}
 		r_draw();
 	  while(SDL_PollEvent(&e)) {
@@ -663,6 +1003,13 @@ void ui_display(view_t *p_view,bool(*events)(SDL_Event *e)) {
 		    						done|=events(&e);
 		    					}
 		    					break;
+		    				case UI_GRID:
+		    					if(grid_key(p_view->focus,e.key.keysym.sym)) {
+	  								e.type=UI_CHANGE;
+	  								e.user.data1=p_view->focus;
+		    						done|=events(&e);
+		    					}
+		    					break;
 		    			}
 		    		}
 		    	}
@@ -674,9 +1021,9 @@ void ui_display(view_t *p_view,bool(*events)(SDL_Event *e)) {
 	  			if(p_ui!=p_ui_over) {
 	  				if(p_ui_down) {
 	  					if(p_ui==p_ui_down) {
-	  						r_offset(p_ui_down->x+p_view->x,p_ui_down->y+p_view->y,p_ui_down->w,p_ui_down->h,2,2);
+	  						r_offset(p_ui_down->x+p_view->x,p_ui_down->y+p_view->y,p_ui_down->w,p_ui_down->h,2);
 		  				} else {
-	  						r_offset(p_ui_down->x+p_view->x,p_ui_down->y+p_view->y,p_ui_down->w,p_ui_down->h,0,0);
+	  						r_offset(p_ui_down->x+p_view->x,p_ui_down->y+p_view->y,p_ui_down->w,p_ui_down->h,0);
 		  				}
 	  				} else {
 		  				if(p_ui_over) {
@@ -713,8 +1060,18 @@ void ui_display(view_t *p_view,bool(*events)(SDL_Event *e)) {
 	  				p_ui_down=find(p_view,x,y);
 	  				if(p_ui_down) {
 		  				switch(p_ui_down->type) {
+		  					case UI_GRID:
+			  					if(x>p_ui->x+p_view->x&&x<p_ui->x+p_view->x+p_ui->w-1
+				  				 &&y>p_ui->y+p_view->y&&y<p_ui->y+p_view->y+p_ui->h-1) {
+				  					((grid_t*)p_ui->obj)->x=(x-(p_ui->x+p_view->x)+((grid_t*)p_ui->obj)->l-1)>>1;
+				  					((grid_t*)p_ui->obj)->y=(y-(p_ui->y+p_view->y)+((grid_t*)p_ui->obj)->t-1)>>1;
+			  						p_view->focus=p_ui_down;
+			  						grid_focus(p_ui_down);
+			  						grid_key(p_ui_down,SDLK_SPACE);
+				  				}
+		  					  break;
 		  					case UI_BUTTON: case UI_TEXT:
-		  						r_offset(p_ui->x+p_view->x,p_ui->y+p_view->y,p_ui->w,p_ui->h,2,2);
+		  						r_offset(p_ui->x+p_view->x,p_ui->y+p_view->y,p_ui->w,p_ui->h,2);
 		  						break;
 		  					case UI_LIST:
 		  						x-=p_ui->x+p_view->x;
@@ -736,7 +1093,7 @@ void ui_display(view_t *p_view,bool(*events)(SDL_Event *e)) {
 	  		case SDL_MOUSEBUTTONUP:
 	  			if(e.button.button==1) {
 	  				if(p_ui_down) {
-		  				r_offset(p_ui_down->x+p_view->x,p_ui_down->y+p_view->y,p_ui_down->w,p_ui_down->h,0,0);
+		  				r_offset(p_ui_down->x+p_view->x,p_ui_down->y+p_view->y,p_ui_down->w,p_ui_down->h,0);
 		  				if(p_ui_over==p_ui_down) {
 		  					e.type=UI_CLICK;
 		  					e.user.data1=p_ui_down;

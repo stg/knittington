@@ -44,7 +44,7 @@ void image_convert(uint8_t *p_data) {
   for(y=0;y<h;y++) {
     for(x=0;x<w;x++) {
       FreeImage_GetPixelColor(dib,x,y,&quad);
-      p_data[y*w+x]=(quad.rgbRed+quad.rgbGreen+quad.rgbBlue)/3;
+      p_data[y*w+x]=((uint16_t)quad.rgbRed+(uint16_t)quad.rgbGreen+(uint16_t)quad.rgbBlue)/3;
     }
   } 
 }

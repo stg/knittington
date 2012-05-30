@@ -14,22 +14,22 @@ typedef struct {
   uint8_t nchar;
   uint8_t cfont;
   uint8_t nfont;
-  int8_t  ofsx;
-  int8_t  ofsy;
+  int8_t  ofs;
+  int8_t  bgc;
   int16_t tick;
 } termchar_t;
 
 static    termchar_t *term;
        			 uint8_t  r_w, r_h;
 static   SDL_Surface *font;
-static const    char  font_chars[] = "#!\"cù% '()|+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZú®¯³ÄÙÀÚ¿´ÃºÍ¼ÈÉ»awdsgyhbnvtumcri";
+static const    char  font_chars[] = "#!\"cù%ñ'()|+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZú®¯³ÄÙÀÚ¿´ÃºÍ¼ÈÉ»awdsgyhbnvtumcri";
 static 		   uint8_t  write_index = 0;
 #ifdef SDL2
 static   SDL_Renderer *renderer;
 #endif
 static   SDL_Surface *screen;
 static   SDL_Surface *bg;
-static          char  cx = -1, cy, ct;
+static          char  cx = -1, cy, ct, cs;
 
 #ifdef SDL2
 static SDL_PixelFormat fmt_rgb = {
@@ -52,10 +52,11 @@ static SDL_PixelFormat fmt_rgb = {
 #define ABS( v ) ( v < 0 ? -v : v )
 #define TERM( x, y ) term[ (y) * r_w + (x) ]
 
-void r_cins( unsigned char x, unsigned char y ) {
+void r_cins( unsigned char x, unsigned char y, unsigned char style ) {
   cx = x;
   cy = y;
   ct = 0;
+  cs = style;
 }
 
 void r_crem() {
@@ -225,20 +226,35 @@ void r_draw() {
       }
 
       if( TERM( x, y ).cchar ) {
-        dstrect.x = ( x << 4 ) + TERM( x, y ).ofsx;
-        dstrect.y = ( y << 4 ) + TERM( x, y ).ofsy;
+        dstrect.x = ( x << 4 ) + TERM( x, y ).ofs;
+        dstrect.y = ( y << 4 ) + TERM( x, y ).ofs;
         srcrect.x = TERM( x, y ).cchar << 4;
         srcrect.y = ( TERM( x, y ).tick >= 0 ? TERM( x, y ).tick << 4 : 240 ) + TERM( x, y ).cfont * 256;
+        if( TERM( x, y ).bgc ) {
+          SDL_FillRect( screen, &dstrect, 0 );
+        }
         SDL_BlitSurface( font, &srcrect, screen, &dstrect );
       }
     }
   }
   if( cx >= 0 ) { 
-    srcrect.x = 0;
-    srcrect.y = ( ct > 15 ? 240 : ct << 4 );
-    dstrect.x = cx << 4;
-    dstrect.y = cy << 4;
-    SDL_BlitSurface( font, &srcrect, screen, &dstrect );
+    if( cs == 0 ) {
+	    srcrect.x = 0;
+	    srcrect.y = ( ct > 15 ? 240 : ct << 4 );
+	    dstrect.x = cx << 4;
+	    dstrect.y = cy << 4;
+	    SDL_BlitSurface( font, &srcrect, screen, &dstrect );
+	  } else {
+	  	for( x = 0; x < 2; x++ ) {
+	  		for( y = 0; y < 2; y++ ) {
+			    srcrect.x = TERM( x + cx, y + cy ).cchar << 4;;
+			    srcrect.y = ( ( ( ct - ( ( x + y ) << 1 ) ) & 31 ) > 15 ? 240 : ( ( ct - ( ( x + y ) << 1 ) ) & 31 ) << 4 );
+			    dstrect.x = ( x + cx ) << 4;
+			    dstrect.y = ( y + cy ) << 4;
+			    SDL_BlitSurface( font, &srcrect, screen, &dstrect );
+	  		}
+	  	}
+	  }
     if( ++ct == 32 ) ct = 0;
   }
 #ifdef SDL2
@@ -295,12 +311,26 @@ void r_button( unsigned char x, unsigned char y, char*caption, unsigned char fb,
 	free(buf);
 }
 
+void r_char( unsigned char x, unsigned char y, char c, unsigned char f, unsigned char b ) {
+  unsigned char j;
+  for( j = 0; j < sizeof( font_chars ) - 1; j++ ) {
+    if( font_chars[ j ] == c || c == ' ' ) {
+      if( TERM( x, y ).nchar != j || TERM( x, y ).nfont != f ) {
+        TERM( x, y ).nchar = j;
+        TERM( x, y ).nfont = f;
+        TERM( x, y ).bgc = b;
+        TERM( x, y ).tick = -( x + y );
+      }
+    }
+  }
+}
+
 void r_write( unsigned char x, unsigned char y, char *s, unsigned char f ) {
   unsigned char i, j, t = 0;
   int len = strlen( s );
   for( i = 0; i < len; i++ ) {
     for( j = 0; j < sizeof( font_chars ) - 1; j++ ) {
-      if( font_chars[ j ] == s[ i ] ) {
+      if( font_chars[ j ] == s[ i ] || s[ i ] == ' ' ) {
         if( TERM( x, y ).nchar != j || TERM( x, y ).nfont != f ) {
           TERM( x, y ).nchar = j;
           TERM( x, y ).nfont = f;
@@ -354,12 +384,11 @@ void r_shine( unsigned char _x, unsigned char _y, unsigned char w, unsigned char
 	}
 }
 
-void r_offset( unsigned char _x, unsigned char _y, unsigned char w, unsigned char h, char ox, char oy ) {
+void r_offset( unsigned char _x, unsigned char _y, unsigned char w, unsigned char h, char o ) {
 	unsigned char x, y;
 	for(y=0;y<h;y++) {
 		for(x=0;x<w;x++) {
-			TERM(x+_x,y+_y).ofsx=ox;
-			TERM(x+_x,y+_y).ofsy=oy;
+			TERM(x+_x,y+_y).ofs=o;
 		}
 	}
 }

@@ -56,6 +56,7 @@ enum {
 };
 
 enum {
+  EDIT_GRID,
 	EDIT_OK,
 	EDIT_COUNT
 };
@@ -193,8 +194,9 @@ static bool top_event(SDL_Event *event) {
 	  		view=VIEW_ADD;
 	  		return true;
 	  	} else if(p_ui==top[TOP_EDIT]) {
-	  	  ui_field_add(msg[MSG_TEXT],"THIS FEATURE IS UNDER\nDEVELOPMENT BUT WILL ALLOW\nPATTERN EDITING WHEN DONE.");
-	  	  view=VIEW_MSG;
+        p_item=ui_list_selected(top[TOP_LIST]);
+        ui_grid_set(edit[EDIT_GRID],&((uint8_t*)p_item->data)[4],((uint16_t*)p_item->data)[0],((uint16_t*)p_item->data)[1]);
+	  	  view=VIEW_EDIT;
 	  	  return true;
 	  	} else if(p_ui==top[TOP_DEL]) {
 				ui_list_remove(top[TOP_LIST],ui_list_selected(top[TOP_LIST]));
@@ -221,11 +223,6 @@ static bool top_event(SDL_Event *event) {
     		case 1:
 			    quit = 1; // Set time to quit
 			    return true;
-			  /*default: // keylogger
-					char text[10];
-	    		sprintf(text,"%i %i",((list_t*)top[TOP_LIST]->obj)->count,event->key.keysym.scancode);
-					ui_list_add(top[TOP_LIST],text,0);
-				*/
     	}
     	break;
 	}
@@ -532,7 +529,7 @@ int main( int argc, char *argv[] ) {
 
 	// build edit pattern view
 	vedit=ui_fsview();
-	//edit[EDIT_GRID]=ui_add(vedit,ui_grid(1,1,38,23));
+	edit[EDIT_GRID]=ui_add(vedit,ui_grid(1,1,38,23));
 	edit[EDIT_OK]=ui_add(vedit,ui_button(18,26,"OK"));
 
 	// build start emulator view
@@ -564,10 +561,6 @@ int main( int argc, char *argv[] ) {
 		free(p_text);
 		strcpy(p_item->data,p_mach->name);
 	}
-	// TODO: remove
-	// p_mach=machine_get(0);
-	// ui_enable(top[TOP_ADD],true);
-	// ENDTODO
 
 	// initial info text
 	ui_field_add(top[TOP_INFO],"CLICK FORMAT\nTO SELECT AND\nBEGIN WORKING\nWITH A SPECIFIC\nKNITTING MACHINE");
