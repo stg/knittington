@@ -1,2 +1,4 @@
 private/
+bin-win/sdl.dll
+bin-win/gui_sdl12.exe
 thumbs.db

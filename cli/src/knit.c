@@ -256,7 +256,7 @@ void cmd_write() {
 void cmd_emulate() {
 	printf("device> ");
 	if(read_cmd("")) {
-		if(!machine_emulate(cmd,stdout)) {
+		if(!machine_emulate(cmd,stdout,NULL)) {
 		  if(halt) exit(1);
 		}
 	}

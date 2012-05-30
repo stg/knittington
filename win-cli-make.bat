@@ -1,4 +1,4 @@
 @echo off
-echo [bin-win\knit.exe] building command-line-interface executable...
-gcc cli\src\knit.c lib\src\*.c -I lib\include\ -o bin-win\knit.exe
-strip bin-win\knit.exe
+echo [bin-win\cli.exe] building command-line-interface executable...
+gcc cli\src\knit.c lib\src\*.c -Ilib\include\ -lsetupapi -o bin-win\cli.exe
+strip bin-win\cli.exe

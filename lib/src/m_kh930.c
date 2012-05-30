@@ -103,8 +103,56 @@ static uint8_t get_track() {
 
 // return true if machine can handle this size pattern
 static bool size_check(uint16_t w,uint16_t h) {
-	// TODO: return w<?&&h<?;
-	return true;
+	// Maximum sizes provided by Mar Canet
+	if(w<=  8&&h<=998) return true;
+  if(w<= 12&&h<=872) return true;
+  if(w<= 16&&h<=698) return true;
+  if(w<= 20&&h<=580) return true;
+  if(w<= 24&&h<=498) return true;
+  if(w<= 28&&h<=436) return true;
+  if(w<= 32&&h<=386) return true;
+  if(w<= 36&&h<=348) return true;
+  if(w<= 40&&h<=316) return true;
+  if(w<= 44&&h<=290) return true;
+  if(w<= 48&&h<=268) return true;
+  if(w<= 52&&h<=248) return true;
+  if(w<= 56&&h<=232) return true;
+  if(w<= 60&&h<=218) return true;
+  if(w<= 64&&h<=204) return true;
+  if(w<= 68&&h<=192) return true;
+  if(w<= 72&&h<=182) return true;
+  if(w<= 76&&h<=174) return true;
+  if(w<= 80&&h<=166) return true;
+  if(w<= 84&&h<=158) return true;
+  if(w<= 88&&h<=150) return true;
+  if(w<= 92&&h<=144) return true;
+  if(w<= 96&&h<=138) return true;
+  if(w<=100&&h<=134) return true;
+  if(w<=104&&h<=128) return true;
+  if(w<=108&&h<=124) return true;
+  if(w<=112&&h<=120) return true;
+  if(w<=116&&h<=116) return true;
+  if(w<=120&&h<=112) return true;
+  if(w<=124&&h<=108) return true;
+  if(w<=128&&h<=104) return true;
+  if(w<=132&&h<=102) return true;
+  if(w<=136&&h<= 98) return true;
+  if(w<=140&&h<= 96) return true;
+  if(w<=144&&h<= 94) return true;
+  if(w<=148&&h<= 94) return true;
+  if(w<=152&&h<= 90) return true;
+  if(w<=156&&h<= 88) return true;
+  if(w<=160&&h<= 86) return true;
+  if(w<=164&&h<= 84) return true;
+  if(w<=168&&h<= 82) return true;
+  if(w<=172&&h<= 80) return true;
+  if(w<=176&&h<= 78) return true;
+  if(w<=180&&h<= 76) return true;
+  if(w<=184&&h<= 74) return true;
+  if(w<=188&&h<= 72) return true;
+  if(w<=192&&h<= 70) return true;
+  if(w<=198&&h<= 68) return true;
+	return false;
 }
 
 // add pattern to memory

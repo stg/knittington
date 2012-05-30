@@ -103,8 +103,7 @@ static uint8_t get_track() {
 
 // return true if machine can handle this size pattern
 static bool size_check(uint16_t w,uint16_t h) {
-	// TODO: return w<?&&h<?;
-	return true;
+	return w<198&&h<998;
 }
 
 // add pattern to memory

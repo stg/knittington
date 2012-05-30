@@ -10,12 +10,104 @@
 #include "serial.h"
 
 #ifdef _WIN32
-
+// windows headers
 #include <stdio.h>
 #include <windows.h>
+#include <winnt.h>
+#include <setupapi.h>
+#else
+// posix headers
+#include <termios.h>
+#include <unistd.h>
+#include <fcntl.h>
+#endif
+
+#ifdef _WIN32
 
 static HANDLE h_serial;
 static COMMTIMEOUTS restore;
+
+// GUID for serial ports class
+static const GUID GUID_SERENUM_BUS_ENUMERATOR={0x86E0D1E0L,0x8089,0x11D0,{0x9C,0xE4,0x08,0x00,0x3E,0x30,0x1F,0x73}};
+
+// windows - enumerate serial ports
+void senum(void (*fp_enum)(char *name, char *device)) {
+  // STG's 50-cents:
+  // for the love of all things sacred... enumerate serial ports already!
+  // not only does this require an utterly convoluted piece of code but it doesn't even work on all windows versions!
+  // to support windows across the board, you'd have to implement at least three different enumeration routines...
+  // god damn it... two fucking hours of my life wasted on this crap!
+  // microsoft, i usually like you, but for this you deserve to be bitchslapped into outer space.
+  HDEVINFO h_devinfo;
+  SP_DEVICE_INTERFACE_DATA ifdata;
+  SP_DEVICE_INTERFACE_DETAIL_DATA *ifdetail;
+  SP_DEVINFO_DATA ifinfo;
+  int count=0;
+  DWORD size=0;
+  char friendlyname[MAX_PATH+1];
+  char name[MAX_PATH+1];
+  char *namecat;
+  DWORD type;
+  HKEY devkey;
+  DWORD keysize;
+  
+  // initialize some stuff
+  memset(&ifdata,0,sizeof(ifdata));
+  ifdata.cbSize=sizeof(SP_DEVICE_INTERFACE_DATA);
+  memset(&ifinfo,0,sizeof(ifinfo));
+  ifinfo.cbSize=sizeof(ifinfo);
+  // set up a device information set
+  h_devinfo=SetupDiGetClassDevs(&GUID_SERENUM_BUS_ENUMERATOR,NULL,0,DIGCF_PRESENT|DIGCF_DEVICEINTERFACE);
+  if(h_devinfo) {
+    while(1) {
+      // enumerate devices
+      if(!SetupDiEnumDeviceInterfaces(h_devinfo,NULL,&GUID_SERENUM_BUS_ENUMERATOR,count,&ifdata)) break;
+      size=0;
+      // fetch size required for "interface details" struct
+      SetupDiGetDeviceInterfaceDetail(h_devinfo,&ifdata,NULL,0,&size,NULL);
+      if(size) {
+        // allocate and initialize "interface details" struct
+        ifdetail=malloc(sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA)+size);
+        memset(ifdetail,0,sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA)+size);
+        ifdetail->cbSize=sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA);
+        // get "device interface details" and "device info"
+        if(SetupDiGetDeviceInterfaceDetail(h_devinfo,&ifdata,ifdetail,size,&size,&ifinfo)) {
+          // retrieve "friendly name" from the registry
+          if(!SetupDiGetDeviceRegistryProperty(h_devinfo,&ifinfo,SPDRP_FRIENDLYNAME,&type,friendlyname,sizeof(friendlyname),&size)) {
+						friendlyname[0]=0;
+          }
+          // open the registry key containing device information
+          devkey=SetupDiOpenDevRegKey(h_devinfo,&ifinfo,DICS_FLAG_GLOBAL,0,DIREG_DEV,KEY_READ);
+          if(devkey!=INVALID_HANDLE_VALUE) {
+            keysize=sizeof(name);
+            // retrieve the actual *short* port name from the registry
+            if(RegQueryValueEx(devkey,"PortName",NULL,NULL,name,&keysize)==ERROR_SUCCESS) {
+              // whoop-dee-fucking-doo, we finally have what we need!
+              if(strlen(friendlyname)) {
+              	// build a display name (because "friendly name" may not contain port name early enough)
+              	namecat=malloc(strlen(name)+strlen(friendlyname)+2);
+              	strcpy(namecat,name);
+              	strcat(namecat," ");
+              	strcat(namecat,friendlyname);
+              	fp_enum(namecat,name);
+              	free(namecat);
+            	} else {
+            		// no "friendly name" available, just use device name
+              	fp_enum(name,name);
+            	}
+            }
+            // close the registry key
+            RegCloseKey(devkey);
+          }
+        }
+        free(ifdetail);
+      }
+      count++;
+    }
+    // DESTROY! DESTROY!
+    SetupDiDestroyDeviceInfoList(h_devinfo);
+  }
+}
 
 // windows - open serial port
 // device has form "COMn"
@@ -77,12 +169,13 @@ bool sclose() {
 
 #else
 
-#include <termios.h>
-#include <unistd.h>
-#include <fcntl.h>
-
 static int h_serial;
 static struct termios restore;
+
+// posix - enumerate serial ports
+void senum(void (*fp_enum)(char *name, char *device)) {
+	// TODO: 
+}
 
 // posix - open serial port
 // device has form "/dev/ttySn"

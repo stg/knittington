@@ -53,6 +53,11 @@ bool machine_save(char *path) {
 }
 
 // Start the emulator
-bool machine_emulate(char *device,FILE *verbose) {
-	return emulate(device,data,sids,verbose);
+bool machine_emulate(char *device,FILE *verbose,void (*fp_event)(uint8_t event,uint8_t data)) {
+	return emulate(device,data,sids,verbose,fp_event);
+}
+
+// Stop the emulator
+void machine_emulate_stop() {
+	emulate_stop();	
 }
