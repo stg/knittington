@@ -536,7 +536,6 @@ int main( int argc, char *argv[] ) {
 	// ENDTODO
 
 	// initial info text
-	ui_field_add(top[TOP_OUT],"HELLO\nWORLD");
 	ui_field_add(top[TOP_INFO],"CLICK FORMAT\nTO SELECT AND\nBEGIN WORKING\nWITH A SPECIFIC\nKNITTING MACHINE");
 
 	// main loop: view switching
