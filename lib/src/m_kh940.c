@@ -103,8 +103,19 @@ static uint8_t get_track() {
 
 // return true if machine can handle this size pattern
 static bool size_check(uint16_t w,uint16_t h) {
+  // Maximum sizes provided by Mar Canet
 	return w<198&&h<998;
 }
+
+// return amount of free memory
+static uint16_t free_memory() {
+  return (0x8000-int_get(p_track,0x700))-0x02B0;
+}
+
+// return amount of needed memory
+static uint16_t needed_memory(uint16_t w,uint16_t h) {
+	return ((h+1)>>1)+(((((w+3)>>2)*h)+1)>>1);
+}  
 
 // add pattern to memory
 // p_image must have width*height bytes
@@ -353,8 +364,11 @@ void kh940_init(machine_t *p_machine,uint8_t *p_disk_data,uint8_t *p_disk_sids) 
   p_machine->get_track=get_track;
   p_machine->size_check=size_check;
   p_machine->add_pattern=add_pattern;
+  p_machine->free_memory=free_memory;
+  p_machine->needed_memory=needed_memory;
   p_machine->info=info;
   p_machine->pattern_min=901;
   p_machine->pattern_max=998;
   p_machine->track_count=2;
+  p_machine->memory=0x8000-0x02B0;
 }

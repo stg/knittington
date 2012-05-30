@@ -31,10 +31,13 @@ typedef struct {
   uint8_t (*get_track)(void);
   bool (*size_check)(uint16_t width,uint16_t height);
   uint16_t (*add_pattern)(uint8_t *p_image,uint16_t width,uint16_t height);
+  uint16_t (*free_memory)();
+  uint16_t (*needed_memory)(uint16_t w,uint16_t h);
   void (*info)(FILE *output);
   uint16_t pattern_min;
   uint16_t pattern_max;
   uint16_t track_count;
+  uint16_t memory;
 } machine_t;
 
 // Initialize all machines

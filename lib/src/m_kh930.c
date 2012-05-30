@@ -155,6 +155,16 @@ static bool size_check(uint16_t w,uint16_t h) {
 	return false;
 }
 
+// return amount of free memory
+static uint16_t free_memory() {
+  return (0x800-int_get(p_track,0x700))-0x2B0;
+}
+
+// return amount of needed memory
+static uint16_t needed_memory(uint16_t w,uint16_t h) {
+	return ((h+1)>>1)+(((((w+3)>>2)*h)+1)>>1);
+}  
+
 // add pattern to memory
 // p_image must have width*height bytes
 static uint16_t add_pattern(uint8_t *p_image,uint16_t w,uint16_t h) {
@@ -188,7 +198,7 @@ static uint16_t add_pattern(uint8_t *p_image,uint16_t w,uint16_t h) {
 	data_bytes=((((w+3)>>2)*h)+1)>>1;
 	
 	// Check memory availability (should be 0x2AE, but leave some to be sure)
-	if(0x7FF-(o_bottom+memo_bytes+data_bytes)>=0x02B0&&ptn_id<999) {
+	if(0x7FF-(o_bottom+memo_bytes+data_bytes)>=0x2B0&&ptn_id<999) {
 
   	// make memo data
   	p_memory=(uint8_t*)malloc(memo_bytes);
@@ -387,8 +397,11 @@ void kh930_init(machine_t *p_machine,uint8_t *p_disk_data,uint8_t *p_disk_sids) 
   p_machine->get_track=get_track;
   p_machine->size_check=size_check;
   p_machine->add_pattern=add_pattern;
+  p_machine->free_memory=free_memory;
+  p_machine->needed_memory=needed_memory;
   p_machine->info=info;
   p_machine->pattern_min=901;
   p_machine->pattern_max=998;
   p_machine->track_count=28;
+  p_machine->memory=0x800-0x2B0;
 }
