@@ -1,5 +1,6 @@
 private/
 bin-win/sdl.dll
 bin-win/gui_sdl12.exe
+bin-win/cli.exe
 thumbs.db
 /ui.bmp

@@ -16,6 +16,12 @@ Picture read capabilities:
 Emulation capabilities:
 * PDD1 floppy drive FDC emulation mode (limited)
 
+== WINDOWS USERS =====================================================
+
+Just download everything in the bin-win\ folder, put it anywhere you
+like, then run gui.exe. This has everything you need to quickly get
+patterns onto your machine.
+
 == FILES =============================================================
 
 bin-X/            Binaries/executables for operating system X
