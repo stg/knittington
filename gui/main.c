@@ -285,6 +285,7 @@ static bool add_event(SDL_Event *event) {
 		  		p_item=ui_list_add(top[TOP_LIST],"PPP IS WWWXHHH",4+w*h);
 		  		((uint16_t*)p_item->data)[0]=w;
 		  		((uint16_t*)p_item->data)[1]=h;
+		  		memset(&((uint8_t*)p_item->data)[4],0xFF,w*h);
 		  		list_fill();
 		  	}
 		  	view=VIEW_TOP;

@@ -1,4 +1,4 @@
 #!/bin/sh
-echo [bin-linux/knit] building command-line-interface binary...
+echo [bin-linux/cli] building command-line-interface binary...
 set -e
-gcc cli/src/knit.c lib/src/*.c -I lib/include/ -o bin-linux/knit
+gcc cli/src/knit.c lib/src/*.c -I lib/include/ -o bin-linux/cli
