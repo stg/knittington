@@ -1,7 +1,7 @@
 #ifdef SDL2
 #include <stdint.h>
 #include <stdbool.h>
-#include <FreeImage/FreeImage.h>
+#include <FreeImage.h>
 #include "loader.h"
 
 static FIBITMAP *dib=NULL;
