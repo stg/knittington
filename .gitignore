@@ -3,4 +3,5 @@ bin-win/sdl.dll
 bin-win/gui_sdl12.exe
 bin-win/cli.exe
 thumbs.db
+*.res
 /ui.bmp
