@@ -19,13 +19,13 @@ uint8_t *image_alloc(uint16_t w,uint16_t h) {
 }
 
 // get pixel from image
-bool image_sample(uint8_t *p_image,uint16_t w,uint16_t x,uint16_t y) {
-	return p_image[y*w+x]<0x80;
+uint8_t image_sample(uint8_t *p_image,uint16_t w,uint16_t x,uint16_t y) {
+	return p_image[y*w+x];
 }
 
 // set pixel in image
-void image_pset(uint8_t *p_image,uint16_t w,uint16_t x,uint16_t y,bool p) {
-	p_image[y*w+x]=p?0x00:0xFF;
+void image_pset(uint8_t *p_image,uint16_t w,uint16_t x,uint16_t y,uint8_t p) {
+	p_image[y*w+x]=p;
 }
 
 // read image file

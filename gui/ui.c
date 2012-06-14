@@ -138,12 +138,6 @@ static bool grid_cset(uiobj_t *p_ui,int16_t x,int16_t y,char c,uint8_t bg) {
 }
 
 static void grid_focus(uiobj_t *p_ui) {
-/*  grid_t *p_grid=p_ui->obj;
-	view_t *p_view=p_ui->view;
-  if(p_grid->data) {
-    r_cins(p_ui->x+p_view->x-p_grid->l+p_grid->x*3+2,p_ui->y+p_view->y-p_grid->t+p_grid->y*3+2);
-  }
-*/
   grid_t *p_grid=p_ui->obj;
 	view_t *p_view=p_ui->view;
   if(p_grid->data) {
@@ -153,77 +147,6 @@ static void grid_focus(uiobj_t *p_ui) {
 }
 
 static void grid_draw(uiobj_t *p_ui) {
-/*  grid_t *p_grid=p_ui->obj;
-	view_t *p_view=p_ui->view;
-	uint16_t x,y;
-	uint8_t bg;
-  if(p_ui->state&9) {
-    r_white(p_ui->x+p_view->x-1,p_ui->y+p_view->y-1,p_ui->w+2,p_ui->h+2);
-    if(p_grid->data) {
-      for(y=1;y<3*p_grid->h+1;y++) {
-        grid_cset(p_ui,0,y,'h',0);
-        grid_cset(p_ui,p_grid->w*3+1,y,'g',0);
-        if(((y-1)%15)==0) {
-          grid_cset(p_ui,-1,y  ,'0'+(((y-1)/300)%10),0);
-          grid_cset(p_ui,-1,y+1,'0'+(((y-1)/ 30)%10),0);
-          grid_cset(p_ui,-1,y+2,'0'+(((y-1)/  3)%10),0);
-          grid_cset(p_ui,-2,y  ,'0'+(((y-1)/300)%10),0);
-          grid_cset(p_ui,-2,y+1,'0'+(((y-1)/ 30)%10),0);
-          grid_cset(p_ui,-2,y+2,'0'+(((y-1)/  3)%10),0);
-        }
-      }
-      for(x=1;x<3*p_grid->w+1;x++) {
-        grid_cset(p_ui,x,0,'b',0);
-        grid_cset(p_ui,x,p_grid->h*3+1,'y',0);
-        if(((x-1)%15)==0) {
-          grid_cset(p_ui,x  ,-1,'0'+(((x-1)/300)%10),0);
-          grid_cset(p_ui,x+1,-1,'0'+(((x-1)/ 30)%10),0);
-          grid_cset(p_ui,x+2,-1,'0'+(((x-1)/  3)%10),0);
-          grid_cset(p_ui,x  ,-2,'0'+(((x-1)/300)%10),0);
-          grid_cset(p_ui,x+1,-2,'0'+(((x-1)/ 30)%10),0);
-          grid_cset(p_ui,x+2,-2,'0'+(((x-1)/  3)%10),0);
-        }
-      }
-      grid_cset(p_ui,0,0,'m',0);
-      grid_cset(p_ui,p_grid->w*3+1,0,'c',0);
-      grid_cset(p_ui,0,p_grid->h*3+1,'r',0);
-      grid_cset(p_ui,p_grid->w*3+1,p_grid->h*3+1,'i',0);
-      for(y=0;y<p_grid->h;y++) {
-        for(x=0;x<p_grid->w;x++) {
-          bg=(p_grid->data[x+y*p_grid->w]<0x80)?1:0;
-          grid_cset(p_ui,x*3+1,y*3+1,'t',bg);
-          grid_cset(p_ui,x*3+2,y*3+1,'y',bg);
-          grid_cset(p_ui,x*3+3,y*3+1,'u',bg);
-          grid_cset(p_ui,x*3+1,y*3+2,'g',bg);
-          grid_cset(p_ui,x*3+2,y*3+2,'ñ',bg);
-          grid_cset(p_ui,x*3+3,y*3+2,'h',bg);
-          grid_cset(p_ui,x*3+1,y*3+3,'v',bg);
-          grid_cset(p_ui,x*3+2,y*3+3,'b',bg);
-          grid_cset(p_ui,x*3+3,y*3+3,'n',bg);
-        }
-      }
-      if(p_grid->l) for(y=0;y<p_ui->h-0;y++) {
-        r_char(p_ui->x+p_view->x,p_ui->y+p_view->y+y,'a',0,0);
-      }
-      if(p_grid->w*3+2-p_grid->l>p_ui->w) for(y=0;y<p_ui->h-0;y++) {
-        r_char(p_ui->x+p_view->x+p_ui->w-1,p_ui->y+p_view->y+y,'d',0,0);
-      }
-      if(p_grid->t) for(x=0;x<p_ui->w-0;x++) {
-        r_char(p_ui->x+p_view->x+x,p_ui->y+p_view->y,'w',0,0);
-      }
-      if(p_grid->h*3+2-p_grid->t>p_ui->h) for(x=0;x<p_ui->w-0;x++) {
-        r_char(p_ui->x+p_view->x+x,p_ui->y+p_view->y+p_ui->h-1,'s',0,0);
-      }
-      if(p_ui->state&8) {
-        r_done(p_ui->x+p_view->x-1,p_ui->y+p_view->y-1,p_ui->w+2,p_ui->h+2);
-      }
-    }
-  }
-  if(p_ui->state&4) {
-    grid_focus(p_ui);
-  }
-  p_ui->state=0;
-*/
   grid_t *p_grid=p_ui->obj;
 	view_t *p_view=p_ui->view;
 	uint16_t x,y;
@@ -261,7 +184,7 @@ static void grid_draw(uiobj_t *p_ui) {
       grid_cset(p_ui,p_grid->w*2+1,p_grid->h*2+1,'i',0);
       for(y=0;y<p_grid->h;y++) {
         for(x=0;x<p_grid->w;x++) {
-          bg=(p_grid->data[x+y*p_grid->w]<0x80)?1:0;
+          bg=0xF-(p_grid->data[x+y*p_grid->w]&0xF);
           grid_cset(p_ui,x*2+1,y*2+1,'t',bg);
           grid_cset(p_ui,x*2+2,y*2+1,'u',bg);
           grid_cset(p_ui,x*2+1,y*2+2,'v',bg);
@@ -292,9 +215,17 @@ static void grid_draw(uiobj_t *p_ui) {
 }
 
 static bool grid_key(uiobj_t *p_ui,SDL_Keycode sym) {
-/*
   grid_t *p_grid=p_ui->obj;
-  switch(sym) {
+  uint16_t x;
+  uint8_t sample=0;
+	if((sym>=SDLK_0&&sym<=SDLK_3)) {
+	  for(x=0;x<p_grid->w;x++) {
+	    if(p_grid->data[x+p_grid->y*p_grid->w]<0xF) {
+	      p_grid->data[x+p_grid->y*p_grid->w]=sym-SDLK_0;
+	      p_ui->state|=8;
+	    }
+	  }
+  } else switch(sym) {
     case SDLK_LEFT:
       if(p_grid->x>0) {
         p_grid->x--;
@@ -320,58 +251,13 @@ static bool grid_key(uiobj_t *p_ui,SDL_Keycode sym) {
       }
       break;
     case SDLK_SPACE:
-      p_grid->data[p_grid->x+p_grid->y*p_grid->w]=p_grid->data[p_grid->x+p_grid->y*p_grid->w]<0x80?0xFF:0x00;
-      p_ui->state|=8;
-      return true;
-  }
-  
-  if((p_grid->x*3+2)-2<p_grid->l) {
-    p_grid->l=(p_grid->x*3+2)-2;
-    p_ui->state|=8;
-  } else if( (p_grid->x*3+2)+3>p_grid->l+p_ui->w ) {
-    p_grid->l=(p_grid->x*3+2)+3-p_ui->w;
-    p_ui->state|=8;
-  }
-
-  if((p_grid->y*3+2)-2<p_grid->t) {
-    p_grid->t=(p_grid->y*3+2)-2;
-    p_ui->state|=8;
-  } else if( (p_grid->y*3+2)+3>p_grid->t+p_ui->h ) {
-    p_grid->t=(p_grid->y*3+2)+3-p_ui->h;
-    p_ui->state|=8;
-  }
-  
-  
-  return false;
-*/
-  grid_t *p_grid=p_ui->obj;
-  switch(sym) {
-    case SDLK_LEFT:
-      if(p_grid->x>0) {
-        p_grid->x--;
-        p_ui->state|=4;
-      }
-      break;
-    case SDLK_RIGHT:
-      if(p_grid->x<p_grid->w-1) {
-        p_grid->x++;
-        p_ui->state|=4;
-      }
-      break;
-    case SDLK_UP:
-      if(p_grid->y>0) {
-        p_grid->y--;
-        p_ui->state|=4;
-      }
-      break;
-    case SDLK_DOWN:
-      if(p_grid->y<p_grid->h-1) {
-        p_grid->y++;
-        p_ui->state|=4;
-      }
-      break;
-    case SDLK_SPACE:
-      p_grid->data[p_grid->x+p_grid->y*p_grid->w]=p_grid->data[p_grid->x+p_grid->y*p_grid->w]<0x80?0xFF:0x00;
+  	  for(x=0;x<p_grid->w;x++) {
+  	    if(p_grid->data[x+p_grid->y*p_grid->w]<0xF) {
+  	      sample=p_grid->data[x+p_grid->y*p_grid->w];
+  	      break;
+  	    }
+  	  }
+      p_grid->data[p_grid->x+p_grid->y*p_grid->w]=p_grid->data[p_grid->x+p_grid->y*p_grid->w]<0x0F?0xFF:sample;
       p_ui->state|=8;
      	break;
     default:

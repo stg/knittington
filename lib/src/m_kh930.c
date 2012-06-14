@@ -50,21 +50,25 @@ static bool decode_header(ptndesc_t *p_desc,uint8_t index) {
 // decode a pattern from memory
 // caller must make sure p_image can hold image by using image_alloc
 static void decode_pattern(ptndesc_t *p_desc,uint8_t *p_image) {
-	uint32_t stride,memo,nptr;
+	uint32_t stride,memo,nptrd,nptrm;
 	uint32_t x,y;
-	
+	uint8_t sample;
+
 	stride=(p_desc->width+3)>>2; // nof nibbles per row
 	memo=(p_desc->height+1)&~1;  // nof nibbles for memo
-	
-	// calculate nibble pointer
-  nptr = 0xFFF-(p_desc->pattern<<1)-(memo+stride*(p_desc->height-1));
-	
+
+	// calculate nibble pointers
+  nptrm = 0xFFF-(p_desc->pattern<<1);
+  nptrd = 0xFFF-(p_desc->pattern<<1)-(memo+stride*(p_desc->height-1));
+
   // decode pattern
   for(y=0;y<p_desc->height;y++) {
   	for(x=0;x<p_desc->width;x++) {
-  		image_pset(p_image,p_desc->width,x,y,(nib_get(p_track,nptr-(x>>2))&(1<<(x&3))));
+  	  sample=(nib_get(p_track,nptrd-(x>>2))&(1<<(x&3)))?nib_get(p_track,nptrm-y):0xFF;
+  	  if(sample>0x1&&sample<0xF) sample--;
+  		image_pset(p_image,p_desc->width,x,y,sample);
   	}
-  	nptr+=stride;
+  	nptrd+=stride;
   }
 }
 
@@ -169,6 +173,7 @@ static uint16_t needed_memory(uint16_t w,uint16_t h) {
 // p_image must have width*height bytes
 static uint16_t add_pattern(uint8_t *p_image,uint16_t w,uint16_t h) {
 	uint8_t   n;
+	uint8_t   sample;
 	uint16_t  ptn_id;
 	uint32_t  temp;
 	uint16_t  x,y;
@@ -199,12 +204,19 @@ static uint16_t add_pattern(uint8_t *p_image,uint16_t w,uint16_t h) {
 	
 	// Check memory availability (should be 0x2AE, but leave some to be sure)
 	if(0x7FF-(o_bottom+memo_bytes+data_bytes)>=0x2B0&&ptn_id<999) {
-
   	// make memo data
   	p_memory=(uint8_t*)malloc(memo_bytes);
   	memset(p_memory,0,memo_bytes);
-  	// set memo data
-  	memset(p_memory,0,memo_bytes);
+  	for(y=0;y<h;y++) {
+  	  for(x=0;x<w;x++) {
+    	  sample=image_sample(p_image,w,x,y);
+    	  if(sample!=0xFF) {
+    	    if(sample>0) sample++;
+    	    nib_set(p_memory,(memo_bytes<<1)-(y+1),sample);
+    	    break;
+    	  }
+  	  }
+  	}
   	// insert into memory @ PATTERN_PTR1
   	memcpy(&p_track[0x800-int_get(p_track,0x700)-memo_bytes],p_memory,memo_bytes);
   	// update PATTERN_PTR1
@@ -227,7 +239,7 @@ static uint16_t add_pattern(uint8_t *p_image,uint16_t w,uint16_t h) {
         // calculate index of the current bit
         bp_this=bp_line-x;
         // sample image
-        if(image_sample(p_image,w,x,y)) bit_set(p_memory,bp_this);
+        if(image_sample(p_image,w,x,y)!=0xFF) bit_set(p_memory,bp_this);
       }
     }
   	// insert into memory @ PATTERN_PTR1

@@ -210,6 +210,7 @@ void r_init( SDL_Surface *scr ) {
 void r_draw() {
   unsigned char x, y;
   unsigned char i, j;
+  Uint32 SDL_color;
   SDL_BlitSurface(bg,NULL,screen,NULL);
   write_index = 0;
   SDL_Rect srcrect;
@@ -231,7 +232,20 @@ void r_draw() {
         srcrect.x = TERM( x, y ).cchar << 4;
         srcrect.y = ( TERM( x, y ).tick >= 0 ? TERM( x, y ).tick << 4 : 240 ) + TERM( x, y ).cfont * 256;
         if( TERM( x, y ).bgc ) {
-          SDL_FillRect( screen, &dstrect, 0 );
+          
+          switch(0xF-TERM( x, y ).bgc) {
+            case 0x0: SDL_color = SDL_MapRGB(screen->format,0x00,0x00,0x00);
+              break;
+            case 0x1: SDL_color = SDL_MapRGB(screen->format,0x00,0x00,0x7F);
+              break;
+            case 0x2: SDL_color = SDL_MapRGB(screen->format,0x00,0x7F,0x00);
+              break;
+            case 0x3: SDL_color = SDL_MapRGB(screen->format,0x7F,0x00,0x00);
+              break;
+            default : SDL_color = SDL_MapRGB(screen->format,0x7F,0x7F,0x7F);
+          }
+          
+          SDL_FillRect( screen, &dstrect, SDL_color );
         }
         SDL_BlitSurface( font, &srcrect, screen, &dstrect );
       }

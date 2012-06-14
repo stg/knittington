@@ -5,20 +5,32 @@ All values are big-endian where appropriate.
 Offset    Bytes        Content
 0x0000    2            Width in pixels/stitches
 0x0002    2            Height in pixels/rows
-0x0008    width*height Greyscale pixel data - top-down, left-right
+0x0008    width*height Pixel data - top-down, left-right
 
 Pixels will output as a stitch when < 50% brightness (0x80).
 
 Example, letter P, 6x9 pixels, 58 bytes, hexadecimal:
 
-00 06
-00 09
-FF FF FF FF FF FF
-FF 00 00 00 FF FF
-FF 00 FF FF 00 FF
-FF 00 FF FF 00 FF
-FF 00 00 00 FF FF
-FF 00 FF FF FF FF
-FF 00 FF FF FF FF
-FF 00 FF FF FF FF
-FF FF FF FF FF FF
+  00 06
+  00 09
+  FF FF FF FF FF FF
+  FF 00 00 00 FF FF
+  FF 00 FF FF 00 FF
+  FF 00 FF FF 00 FF
+  FF 00 00 00 FF FF
+  FF 00 FF FF FF FF
+  FF 00 FF FF FF FF
+  FF 00 FF FF FF FF
+  FF FF FF FF FF FF
+
+Pixel values for single color patterns:
+
+  00 contrast yarn
+  FF main yarn
+
+Pixel values for multi-color patterns:
+
+  01 contrast yarn 1
+  02 contrast yarn 2
+  03 contrast yarn 3
+  FF main yarn

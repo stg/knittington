@@ -14,10 +14,10 @@ extern "C" {
 uint8_t *image_alloc(uint16_t width,uint16_t height);
 
 // get pixel from image
-bool image_sample(uint8_t *p_image,uint16_t width,uint16_t x,uint16_t y);
+uint8_t image_sample(uint8_t *p_image,uint16_t width,uint16_t x,uint16_t y);
 
 // set pixel in image
-void image_pset(uint8_t *p_image,uint16_t width,uint16_t x,uint16_t y,bool pixel);
+void image_pset(uint8_t *p_image,uint16_t width,uint16_t x,uint16_t y,uint8_t pixel);
 
 // read image file
 uint8_t *image_read(FILE *f,uint16_t *width,uint16_t *height);

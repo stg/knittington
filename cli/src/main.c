@@ -138,11 +138,15 @@ static void cmd_track() {
 // print image to screen
 static void image_print(uint8_t *p_img,uint16_t w,uint16_t h) {
 	uint16_t x,y;
+	uint8_t sample,memo;
 	for(y=0;y<h;y++) {
+		memo=0;
 		for(x=0;x<w;x++) {
-			putchar(image_sample(p_img,w,x,y)?'X':'-');
+		  sample=image_sample(p_img,w,x,y);
+		  if(memo==0&&sample!=0xFF) memo=sample&0xF;
+			putchar(sample!=0xFF?'X':'-');
 		}
-		printf("\n");
+		printf(" %01X\n",memo);
 	}
 }
 
