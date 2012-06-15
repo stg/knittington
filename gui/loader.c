@@ -89,7 +89,6 @@ void image_convert(uint8_t *p_data) {
       p_data[y*w+x]=match_color(&quad);
     }
   }
-  image_print(p_data,w,h);
 }
 
 void image_free() {

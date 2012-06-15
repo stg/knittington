@@ -1,8 +1,9 @@
 Disk image manager for knitting machines.
 
 Machine capabilities:
+* Brother Electroknit KH-950
 * Brother Electroknit KH-940
-* Brother Electroknit KH-930 (BETA=not tested)
+* Brother Electroknit KH-930 BETA
 * ! Your machine here?
     Help out the project! :)
 
