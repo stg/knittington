@@ -8,7 +8,8 @@ Machine capabilities:
     Help out the project! :)
 
 Recognition:
-* Thanks to Varvara Guljajeva and Mar Canet for inspiring the project!
+* Thanks to Varvara Guljajeva and Mar Canet for inspiring the project
+* Thanks to Steve Conklin for information provided at Antitronics
 * GUI relies on SDL2 and FreeImage
 
 Software using library:
