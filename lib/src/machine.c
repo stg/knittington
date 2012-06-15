@@ -13,7 +13,7 @@
 #include "emulate.h"
 #include "fileio.h"
 
-#define MACHINE_COUNT 2
+#define MACHINE_COUNT 3
 
 static machine_t mach[MACHINE_COUNT];
 static machine_t *p_mach=mach;
@@ -32,8 +32,9 @@ static void machine_add(const char *p_code,void(*fp_init)(machine_t*,uint8_t*,ui
 
 // Initialize all machines
 void machine_init() {
-	machine_add("kh940",kh940_init);
-	machine_add("kh930",kh930_init);
+	machine_add("kh950",kh940_init); // KH-950 uses same module as KH-940
+	machine_add("kh940",kh940_init); // KH-940
+	machine_add("kh930",kh930_init); // KH-930
 }
 
 // Retrieve machine descriptor

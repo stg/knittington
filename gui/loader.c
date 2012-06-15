@@ -37,13 +37,6 @@ static RGBQUAD colors[16] = {
 bool image_loadpicture(const char* filename) {
   FREE_IMAGE_FORMAT fif=FIF_UNKNOWN;
   int flag=0;
-/*
-  int n;
-  for(n=0;n<strlen(filename);n++) {
-    printf("%02X ",filename[n]);
-  }
-  printf("\n");
-*/  
   fif=FreeImage_GetFileType(filename,0);
   if(fif==FIF_UNKNOWN) {
     fif=FreeImage_GetFIFFromFilename(filename);
@@ -75,7 +68,6 @@ uint16_t image_height() {
 static uint8_t match_color(RGBQUAD *p_quad) {
   uint16_t diff,best=0xFFFF;
   uint8_t n,i=0x0F;
-//  printf("%02X%02X%02X ",p_quad->rgbRed,p_quad->rgbGreen,p_quad->rgbBlue);
   for(n=0;n<16;n++) {
     diff = ABS((RED(p_quad))  -((int16_t)colors[n].rgbRed  ))
          + ABS((GREEN(p_quad))-((int16_t)colors[n].rgbGreen))
@@ -85,22 +77,7 @@ static uint8_t match_color(RGBQUAD *p_quad) {
       i=n;
     }
   }
-//  printf("%02X ",i);
   return i==0x0F?0xFF:i;
-}
-
-static void image_print(uint8_t *p_img,uint16_t w,uint16_t h) {
-	uint16_t x,y;
-	uint8_t sample,memo;
-	for(y=0;y<h;y++) {
-		memo=0;
-		for(x=0;x<w;x++) {
-		  sample=image_sample(p_img,w,x,y);
-		  if(memo==0&&sample!=0xFF) memo=sample&0xF;
-//			printf("%c",sample!=0xFF?'X':'-');
-		}
-//		printf(" %01X\n",memo);
-	}
 }
 
 void image_convert(uint8_t *p_data) {
@@ -111,7 +88,6 @@ void image_convert(uint8_t *p_data) {
       FreeImage_GetPixelColor(dib,x,y,&quad);
       p_data[y*w+x]=match_color(&quad);
     }
-//    printf("\n");
   }
   image_print(p_data,w,h);
 }

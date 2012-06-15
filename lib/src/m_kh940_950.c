@@ -1,4 +1,4 @@
-// Source file for the Brother Electroknit KH-940 machine specifics
+// Source file for the Brother Electroknit KH-940 & KH-950 machine specifics
 //
 // senseitg@gmail.com 2012-May-22
 
@@ -15,7 +15,7 @@ static uint8_t *p_data; //81920
 static uint8_t *p_sids; //960
 static uint8_t *p_track;
 
-static char name[]="Brother Electroknit KH-940";
+static char name[]="Brother Electroknit KH-940/950";
 
 // return nof bytes used (excl header) by currently loaded pattern
 static uint16_t get_size(ptndesc_t *p_desc) {
