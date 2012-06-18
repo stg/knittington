@@ -37,11 +37,7 @@ patterns onto your machine.
 bin-X/            Binaries/executables for operating system X
 lib/              Source files for the disk image manager/emulator
 cli/              Source files for command line interface
-cpp_class/        Source files for C++ wrapper
-disk_images/      Samples of disk images
-  1.img           Three small designs (actual data from machine)
-  2.img           Two wide/tall designs (actual data from machine)
-  3.img           Seven very different designs (generated file)
+gui/              Source files for graphical user interface
 doc/              File/memory layout description
 ptn/              Sample patterns as both original bmp and raw
 
