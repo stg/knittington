@@ -86,7 +86,7 @@ void image_convert(uint8_t *p_data) {
   for(y=0;y<h;y++) {
     for(x=0;x<w;x++) {
       FreeImage_GetPixelColor(dib,x,y,&quad);
-      p_data[y*w+x]=match_color(&quad);
+      p_data[(h-(y+1))*w+x]=match_color(&quad);
     }
   }
 }
