@@ -125,7 +125,7 @@ show - Show patterns contained in memory
   
   While in this mode, enter the pattern number of an available
   pattern to print out a graphical representation of the
-  pattern as well as it's binary data representation.
+  pattern as well as its binary data representation.
 
 
 info - Shows additional non-pattern information
