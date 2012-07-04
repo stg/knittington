@@ -7,30 +7,46 @@ Machine capabilities:
 * ! Your machine here?
     Help out the project! :)
 
+Emulation capabilities:
+* PDD1 floppy drive FDC emulation mode (limited)
+
+Picture read capabilities:
+* Recommended: 24-bit RGB - GIF, TIFF, PNG
+* Any format supported by FreeImage
+
+Software using library:
+* Alternative OpenFrameworks GUI
+  See http://www.mcanet.info/patternUploader/ for information
+
 Recognition:
+* Thanks to Jonas Bengtsson for OSX support and binaries
+* Thanks to Andrew Solomone for the full-color knitting style
 * Thanks to Varvara Guljajeva and Mar Canet for inspiring the project
 * Thanks to Steve Conklin for information provided at Antitronics
 * GUI relies on SDL2 and FreeImage
-
-Software using library:
-* Pattern Uploader GUI - highly recommended!
-  See http://www.mcanet.info/patternUploader/ for information
-
-Disk image capabilities:
-* 80k disk image files (our proprietary format)
-* Steve Conklin's Tandy PDD1 floppy drive emulator data folders
-
-Picture read capabilities:
-* raw (our proprietary format)
-
-Emulation capabilities:
-* PDD1 floppy drive FDC emulation mode (limited)
 
 == WINDOWS USERS =====================================================
 
 Just download everything in the bin-win\ folder, put it anywhere you
 like, then run gui.exe. This has everything you need to quickly get
 patterns onto your machine.
+
+== MAC USERS =========================================================
+
+OSX binaries can be found in the bin-osx/ directory.
+Jonas, would you like to put in a word here?
+
+== LINUX USERS =======================================================
+
+Linux binares can be found in the bin-linux/ directory.
+This requires a modidifed SDL2 library to add xDnD support.
+Tested under Ubuntu only.
+
+Still no serial port detection effectively making the program useless
+for linux at this point. HELP WANTED!
+
+The modified SDL2 .so file must be placed in the library search path.
+Sorry for this odd procedure. HELP WANTED!
 
 == FILES =============================================================
 
@@ -41,10 +57,36 @@ gui/              Source files for graphical user interface
 doc/              File/memory layout description
 ptn/              Sample patterns as both original bmp and raw
 
-win-cli-make.bat  Build CLI program (windows batch file)
-linux-cli.make.sh Build CLI program (linux shell script)
+win-###-make.bat  Build ###:cli/gui program (windows batch file)
+linux-###.make.sh Build ###:cli/gui program (linux shell script)
+osx-###.make.sh   Build ###:cli/gui program (osx shell script)
 
-== HOW TO USE ========================================================
+Want to help out by creating makefiles? Let me know!
+
+== HOW TO USE GUI UTILITY ============================================
+
+Sorry, no proper documentation available at this point. HELP WANTED!
+
+It is however fairly straight forward!
+
+1) Install the application (os dependant process) and launch it.
+2) Click FORMAT and select your machine
+3) Drag pictures (24-bit GIF, PNG or TIFF) into the window
+   Make sure the pictures are of size STITCHESxROWS pixels.
+   Pictures with two colors will import as single color.
+   Pictures with different colors will import as multi or full color.
+     Multi-color: pictures with only one contrast color per row
+     Full-color: pictures with several colors on one or more rows
+       Full-color requires special stitching procedure
+4) Verify import by clicking pattern in list on the left, then EDIT.
+5) Click EMULATE and select the correct serial port in the list
+6) Use the knitting machine to load from disk (track #1 only)
+
+== HOW TO USE CLI UTILITY ============================================
+
+The CLI utility can be considered outdated, but is still useful when
+you need to make patterns on a new machine and store them as a file
+for analysis. The GUI does not provide this functionality.
 
 Compile and launch knit executable.
 
@@ -180,7 +222,7 @@ quit - Self explanatory
 halt - Enable/disable halt on errors
   Enabling halt on errors is good for command line execution
   
-== BATCH EXECUTION ===================================================
+== CLI BATCH EXECUTION ===============================================
 
 All commands can be executed from command line, for example:
 
