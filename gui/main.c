@@ -9,7 +9,7 @@
 #include "ui.h"
 #include "machine.h"
 #include "emulate.h"
-#include "loader.h"
+#include "picture.h"
 
 // screen surface
 #ifdef SDL2
@@ -147,18 +147,18 @@ static bool top_event(SDL_Event *event) {
 		case SDL_DROPFILE:
 			if(p_mach) {
   			if(event->drop.file) {
-  			  if(image_loadpicture(event->drop.file)) {
-  			    if(p_mach->size_check(image_width(),image_height())) {
-  			      p_item=ui_list_add(top[TOP_LIST],"PPP IS WWWXHHH",4+image_width()*image_height());
-  		  		  ((uint16_t*)p_item->data)[0]=image_width();
-  		  		  ((uint16_t*)p_item->data)[1]=image_height();
-  		  		  image_convert(&((uint8_t*)p_item->data)[4]);
+  			  if(picture_load(event->drop.file)==0) {
+  			    if(p_mach->size_check(picture_width(),picture_height())) {
+  			      p_item=ui_list_add(top[TOP_LIST],"PPP IS WWWXHHH",4+picture_width()*picture_height());
+  		  		  ((uint16_t*)p_item->data)[0]=picture_width();
+  		  		  ((uint16_t*)p_item->data)[1]=picture_height();
+  		  		  picture_convert(&((uint8_t*)p_item->data)[4]);
   		  		  list_fill();
   			      stat_add++;
   			    } else {
   			      stat_size++;
   			    }
-  			    image_free();
+  			    picture_free();
   			  } else {
   			    stat_format++;
   			  }

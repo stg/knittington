@@ -240,7 +240,17 @@ void r_draw() {
               break;
             case 0x2: SDL_color = SDL_MapRGB(screen->format,0x00,0x7F,0x00);
               break;
-            case 0x3: SDL_color = SDL_MapRGB(screen->format,0x7F,0x00,0x00);
+            case 0x3: SDL_color = SDL_MapRGB(screen->format,0x00,0x7F,0x7F);
+              break;
+            case 0x4: SDL_color = SDL_MapRGB(screen->format,0x7F,0x00,0x00);
+              break;
+            case 0x5: SDL_color = SDL_MapRGB(screen->format,0x7F,0x00,0x7F);
+              break;
+            case 0x6: SDL_color = SDL_MapRGB(screen->format,0x7F,0x7F,0x00);
+              break;
+            case 0x7: SDL_color = SDL_MapRGB(screen->format,0x00,0x00,0xFF);
+              break;
+            case 0x8: SDL_color = SDL_MapRGB(screen->format,0x00,0xFF,0x00);
               break;
             default : SDL_color = SDL_MapRGB(screen->format,0x7F,0x7F,0x7F);
           }

@@ -211,7 +211,6 @@ static uint16_t add_pattern(uint8_t *p_image,uint16_t w,uint16_t h) {
   	  for(x=0;x<w;x++) {
     	  sample=image_sample(p_image,w,x,h-(y+1));
     	  if(sample!=0xFF) {
-    	    if(sample>0) sample++;
     	    nib_set(p_memory,(memo_bytes<<1)-(y+1),sample);
     	    break;
     	  }

@@ -218,7 +218,7 @@ static bool grid_key(uiobj_t *p_ui,SDL_Keycode sym) {
   grid_t *p_grid=p_ui->obj;
   uint16_t x;
   uint8_t sample=0;
-	if((sym>=SDLK_0&&sym<=SDLK_3)) {
+	if((sym>=SDLK_0&&sym<=SDLK_4)) {
 	  for(x=0;x<p_grid->w;x++) {
 	    if(p_grid->data[x+p_grid->y*p_grid->w]<0xF) {
 	      p_grid->data[x+p_grid->y*p_grid->w]=sym-SDLK_0;

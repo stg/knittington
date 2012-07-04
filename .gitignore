@@ -6,3 +6,6 @@ thumbs.db
 *.res
 /ui.bmp
 web/
+debug/
+debug.bat
+ptn_raw/
