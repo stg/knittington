@@ -1,5 +1,16 @@
 DISK IMAGE MANAGER AND GUI FOR UPLOADING PATTERNS TO KNITTING MACHINES
 
+This program will allow you to design patterns in any raster image
+editor such as gimp, photoshop, paintbrush, picasa, corel painter, etc.
+and upload them to your knitting machine.
+
+You will need to build an interface cable. How to do this:
+* http://www.ladyada.net/wiki/tutorials/knittingmachine/ftdicable.html
+
+Fully supported on WINDOWS ONLY, OSX and Linux support is being
+actively worked on, but you can contribute by contacting
+senseitg@gmail.com
+
 Machine capabilities:
 * Brother Electroknit KH-950
 * Brother Electroknit KH-940
