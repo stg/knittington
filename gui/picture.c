@@ -19,7 +19,7 @@
 #define MIN3(x,y,z)  ((y) <= (z) ? ((x) <= (y) ? (x) : (y)) : ((x) <= (z) ? (x) : (z)))
 #define MAX3(x,y,z)  ((y) >= (z) ? ((x) >= (y) ? (x) : (y)) : ((x) >= (z) ? (x) : (z)))
 
-// byte order access fixes bug in FreeImage
+// byte order access fixes color ordering problem in FreeImage
 #define RED(q)   ((q)->rgbBlue)
 #define GREEN(q) ((q)->rgbGreen)
 #define BLUE(q)  ((q)->rgbRed)
