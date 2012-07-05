@@ -281,26 +281,31 @@ void picture_convert(uint8_t *p_data) {
     // full-color patterns
     for(y = 0; y < h_original; y += 2) {
       for(c = 0; c < MAX_COLORS; c++) {
-        for(x = 0; x < w; x++) {
-          FreeImage_GetPixelColor(dib, x, y, &quad);
-          FreeImage_GetPixelColor(dib, x, y + 1, &quad_two);
-          if(match(&quad, &color[c].color) || match(&quad_two, &color[c].color)) break;
-        }
-        if(x < w) {
+        if(color[c].used) {
           for(x = 0; x < w; x++) {
-            FreeImage_GetPixelColor(dib,x,y,&quad);
-            p_data[(h-(y_out+1))*w+x] = (match_color(&quad) == color[c].memo) ? color[c].memo : 0xFF;
+            FreeImage_GetPixelColor(dib, x, y, &quad);
+            FreeImage_GetPixelColor(dib, x, y + 1, &quad_two);
+            if(match(&quad, &color[c].color) || match(&quad_two, &color[c].color)) break;
           }
-          y_out++;
-          for(x = 0; x < w; x++) {
-            FreeImage_GetPixelColor(dib,x,y+1,&quad);
-            p_data[(h-(y_out+1))*w+x] = (match_color(&quad) == color[c].memo) ? color[c].memo : 0xFF;
+          if(x < w) {
+            for(x = 0; x < w; x++) {
+              FreeImage_GetPixelColor(dib,x,y,&quad);
+              p_data[(h-(y_out+1))*w+x] = (match_color(&quad) == color[c].memo) ? color[c].memo : 0xFF;
+            }
+            y_out++;
+            for(x = 0; x < w; x++) {
+              FreeImage_GetPixelColor(dib,x,y+1,&quad);
+              p_data[(h-(y_out+1))*w+x] = (match_color(&quad) == color[c].memo) ? color[c].memo : 0xFF;
+            }
+            y_out++;
           }
-          y_out++;
         }
       }
     }
   }
+#ifdef DEBUG
+  printf("conversion rows %i\n",y_out);
+#endif  
 }
 
 void picture_free() {
