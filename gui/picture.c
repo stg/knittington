@@ -42,11 +42,21 @@ typedef struct {
   uint8_t   memo;
 } color_list;
 
-static FIBITMAP *dib=NULL;
-static uint16_t w,h,h_original;
-
+static FIBITMAP *dib = NULL;
+static uint16_t w, h, h_original;
+static uint8_t last_error;
 static color_list color[MAX_COLORS];
 static uint8_t color_mode;
+
+static rgb_color sample_rgb(uint16_t x, uint16_t y) {
+  RGBQUAD quad;
+  rgb_color ret;
+  FreeImage_GetPixelColor(dib,x,y,&quad);
+  ret.r = RED(&quad);
+  ret.g = GREEN(&quad);
+  ret.b = BLUE(&quad);
+  return ret;
+}
 
 static hsv_color rgb_to_hsv(rgb_color rgb) {
   uint8_t rgb_min, rgb_max;
@@ -91,11 +101,11 @@ static uint8_t weight(color_list* color) {
 }
 
 // "liberal" color matcher
-static bool match(RGBQUAD* quad, rgb_color* color) {
+static bool match(rgb_color* p_rgb, uint8_t index) {
   uint8_t r, g, b;
-  r = ABS((int16_t)RED(quad)   - (int16_t)color->r);
-  g = ABS((int16_t)GREEN(quad) - (int16_t)color->g);
-  b = ABS((int16_t)BLUE(quad)  - (int16_t)color->b);
+  r = ABS((int16_t)p_rgb->r - (int16_t)(color[index].color.r));
+  g = ABS((int16_t)p_rgb->g - (int16_t)(color[index].color.g));
+  b = ABS((int16_t)p_rgb->b - (int16_t)(color[index].color.b));
   return (r < 16) && (g < 16) && (b < 16);
 }
 
@@ -105,7 +115,7 @@ static uint8_t analyze() {
   uint8_t color_count = 0;
   uint8_t row_colors;
   uint16_t h_add = 0;
-  RGBQUAD quad, quad_two;
+  rgb_color pri, sec;
   memset(color, 0, sizeof(color));
   color_list swap;
 #ifdef DEBUG
@@ -114,27 +124,25 @@ static uint8_t analyze() {
   // find colors
   for(y = 0; y < h; y++) {
     for(x = 0; x < w; x++) {
-      FreeImage_GetPixelColor(dib, x, y, &quad);
+      pri = sample_rgb(x, y);
       for(c = 0; c < MAX_COLORS; c++) {
         if(color[c].used) {
-          if(match(&quad, &color[c].color)) break;
+          if(match(&pri, c)) break;
         } else {
           color[c].used = TRUE;
-          color[c].color.r = RED(&quad);
-          color[c].color.g = GREEN(&quad);
-          color[c].color.b = BLUE(&quad);
+          color[c].color = pri;
           color_count++;
           break;
         }
       }
-      if(c == MAX_COLORS) return 1;
+      if(c == MAX_COLORS) return PIC_OVERFLOW;
     }
   }
 #ifdef DEBUG
   printf("found %i colors\n",color_count);
 #endif
   // blank design? bail!
-  if(color_count < 2) return 2;
+  if(color_count < 2) return PIC_UNDERFLOW;
   // sort colors
   for(x = 0; x < color_count - 1; x++) {
     for(y = x + 1; y < color_count; y++) {
@@ -156,14 +164,14 @@ static uint8_t analyze() {
     for(c = 0; c < color_count; c++) {
       color[c].memo = c + 1;
     }
-    color_mode = 1;
+    color_mode = PIC_MULTI;
     // check if full-color mode is required
     for(y = 0; y < h; y++) {
       row_colors = 1; // row always has main yarn
       for(c = 1; c < color_count; c++) {
         for(x = 0; x < w; x++) {
-          FreeImage_GetPixelColor(dib, x, y, &quad);
-          if(match(&quad, &color[c].color)) {
+          pri = sample_rgb(x, y);
+          if(match(&pri, c)) {
             row_colors++;
             break;
           }
@@ -171,12 +179,12 @@ static uint8_t analyze() {
       }
       if(row_colors > 2) {
         // full-color required!
-        color_mode = 2;
+        color_mode = PIC_FULL;
         break;
       }
     }
 #ifdef DEBUG
-  if(color_mode == 2) {
+  if(color_mode == PIC_FULL) {
     printf("mode is full-color\n");
   } else {
     printf("mode is multi-color\n");
@@ -184,17 +192,17 @@ static uint8_t analyze() {
 #endif
 
     // is this a full-color pattern?
-    if(color_mode == 2) {
+    if(color_mode == PIC_FULL) {
       // not multiple of two? bail!
-      if((h & 1) == 1) return 3;
+      if((h & 1) == 1) return PIC_FULLHEIGHT;
       // calculate required height of converted full-color pattern
       for(y = 0; y < h; y += 2) {
         row_colors = 0;
         for(c = 0; c < color_count; c++) {
           for(x = 0; x < w; x++) {
-            FreeImage_GetPixelColor(dib, x, y, &quad);
-            FreeImage_GetPixelColor(dib, x, y + 1, &quad_two);
-            if(match(&quad, &color[c].color) || match(&quad_two, &color[c].color)) {
+            pri = sample_rgb(x, y);
+            sec = sample_rgb(x, y + 1);
+            if(match(&pri, c) || match(&sec, c)) {
               row_colors++;
               break;
             }
@@ -214,34 +222,56 @@ static uint8_t analyze() {
 #ifdef DEBUG
   printf("mode is single-color\n");
 #endif
-    color_mode = 0;
+    color_mode = PIC_SINGLE;
     color[0].memo = 0xFF;
   }
-  return 0;
+  return PIC_OK;
+}
+
+uint8_t picture_error() {
+  return last_error;
+}
+
+uint8_t picture_mode() {
+  return color_mode;
 }
 
 uint8_t picture_load(const char* filename) {
-  FREE_IMAGE_FORMAT fif=FIF_UNKNOWN;
-  int flag=0;
-  fif=FreeImage_GetFileType(filename,0);
-  if(fif==FIF_UNKNOWN) {
+  FREE_IMAGE_FORMAT fif = FIF_UNKNOWN;
+  int flag = 0;
+  FIBITMAP *temp;
+  fif=FreeImage_GetFileType(filename, 0);
+  if(fif == FIF_UNKNOWN) {
     fif=FreeImage_GetFIFFromFilename(filename);
   }
-  if((fif!=FIF_UNKNOWN)&&FreeImage_FIFSupportsReading(fif)) {
-    dib=FreeImage_Load(fif,filename,flag);
-    if(dib) {
-      w=FreeImage_GetWidth(dib);
-      h=FreeImage_GetHeight(dib);
-      if(w>4000||h>4000) {
-        FreeImage_Unload(dib);
-        dib=NULL;
+  if((fif != FIF_UNKNOWN) && FreeImage_FIFSupportsReading(fif)) {
+    temp = FreeImage_Load(fif, filename,flag);
+    if(temp) {
+      dib = FreeImage_ConvertTo24Bits(temp);
+      FreeImage_Unload(temp);
+      if(dib) {
+        w = FreeImage_GetWidth(dib);
+        h = FreeImage_GetHeight(dib);
+        if(w == 0 || h == 0) {
+          FreeImage_Unload(dib);
+          dib=NULL;
+          return (last_error = PIC_LOADING);
+        } else if(w > 1000 || h > 4000) {
+          FreeImage_Unload(dib);
+          dib=NULL;
+          return (last_error = PIC_SIZE);
+        } else {
+          return (last_error = analyze());
+        }
       } else {
-        return analyze();
-        //return true;
+        return (last_error = PIC_CONVERT);
       }
+    } else {
+      return (last_error = PIC_LOADING);
     }
+  } else {
+    return (last_error = PIC_FORMAT);
   }
-  return ;
 }
 
 uint16_t picture_width() {
@@ -253,11 +283,11 @@ uint16_t picture_height() {
 }
 
 
-static uint8_t match_color(RGBQUAD *p_quad) {
+static uint8_t match_memo(rgb_color* p_pri) {
   uint8_t c;
   for(c = 0; c < MAX_COLORS; c++) {
     if(color[c].used) {
-      if(match(p_quad, &color[c].color)) return color[c].memo;
+      if(match(p_pri, c)) return color[c].memo;
     }
   }
   // we should NEVER get here
@@ -268,13 +298,13 @@ static uint8_t match_color(RGBQUAD *p_quad) {
 void picture_convert(uint8_t *p_data) {
   uint16_t x, y, y_out = 0;
   uint8_t c;
-  RGBQUAD quad, quad_two;
+  rgb_color pri, sec;
   if(color_mode != 2) {
     // single-/multi-color patterns
     for(y = 0; y < h; y++) {
       for(x = 0; x < w; x++) {
-        FreeImage_GetPixelColor(dib,x,y,&quad);
-        p_data[(h-(y+1))*w+x]=match_color(&quad);
+        pri = sample_rgb(x, y);
+        p_data[(h - (y + 1)) * w + x]=match_memo(&pri);
       }
     }
   } else {
@@ -283,19 +313,19 @@ void picture_convert(uint8_t *p_data) {
       for(c = 0; c < MAX_COLORS; c++) {
         if(color[c].used) {
           for(x = 0; x < w; x++) {
-            FreeImage_GetPixelColor(dib, x, y, &quad);
-            FreeImage_GetPixelColor(dib, x, y + 1, &quad_two);
-            if(match(&quad, &color[c].color) || match(&quad_two, &color[c].color)) break;
+            pri = sample_rgb(x, y);
+            sec = sample_rgb(x, y + 1);
+            if(match(&pri, c) || match(&sec, c)) break;
           }
           if(x < w) {
             for(x = 0; x < w; x++) {
-              FreeImage_GetPixelColor(dib,x,y,&quad);
-              p_data[(h-(y_out+1))*w+x] = (match_color(&quad) == color[c].memo) ? color[c].memo : 0xFF;
+              pri = sample_rgb(x,y);
+              p_data[(h - (y_out + 1)) * w + x] = match(&pri, c) ? color[c].memo : 0xFF;
             }
             y_out++;
             for(x = 0; x < w; x++) {
-              FreeImage_GetPixelColor(dib,x,y+1,&quad);
-              p_data[(h-(y_out+1))*w+x] = (match_color(&quad) == color[c].memo) ? color[c].memo : 0xFF;
+              sec = sample_rgb(x,y + 1);
+              p_data[(h - (y_out + 1)) * w + x] = match(&sec, c) ? color[c].memo : 0xFF;
             }
             y_out++;
           }

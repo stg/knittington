@@ -163,7 +163,24 @@ static bool top_event(SDL_Event *event) {
   			    stat_format++;
   			  }
     		} else {
-    		  sprintf(text,"SUCCESSFULLY ADDED: %i\nTOO BIG FOR MACHINE: %i\nUNRECOGNIZED FORMAT: %i",stat_add,stat_size,stat_format);
+    		  if((stat_add+stat_size+stat_format)==1) {
+      		  if(picture_error()==PIC_OK) {
+      		    sprintf(text,"IMPORT SUCCESSFUL\nSIZE: %i X %i\nMODE: %s-COLOR",picture_width(),picture_height(),(picture_mode()==PIC_SINGLE)?"SINGLE":(picture_mode()==PIC_MULTI)?"MULTI":"FULL");
+      		  } else {
+      		    switch(picture_error()) {
+                case PIC_FORMAT:     sprintf(text, "ERROR\nUNRECOGNIZED FILE FORMAT\nIMPORT FAILED"); break;
+                case PIC_LOADING:    sprintf(text, "ERROR\nUNABLE TO DECODE FILE\nIMPORT FAILED"); break;
+                case PIC_CONVERT:    sprintf(text, "ERROR\nPICTURE CONVERSION FAILED\nIMPORT FAILED"); break;
+                case PIC_OVERFLOW:   sprintf(text, "ERROR\nPICTURE HAS TOO MANY COLORS\nIMPORT FAILED"); break;
+                case PIC_UNDERFLOW:  sprintf(text, "ERROR\nPICTURE HAS ONLY ONE COLOR\nIMPORT FAILED"); break;
+                case PIC_FULLHEIGHT: sprintf(text, "ERROR\nFULL-COLOR MUST BE MULTIPLE OF 2 HIGH\nIMPORT FAILED"); break;
+                case PIC_SIZE:       sprintf(text, "ERROR\nPICTURE IS WAY TOO BIG\nIMPORT FAILED"); break;
+      		      default:             sprintf(text, "ERROR\nUNKNOWN ERROR %i\nIMPORT FAILED", picture_error()); break;
+      		    }
+      		  }
+    		  } else {
+      		  sprintf(text,"SUCCESSFULLY ADDED: %i\nTOO BIG FOR MACHINE: %i\nUNRECOGNIZED FORMAT: %i",stat_add,stat_size,stat_format);
+      		}
     		  ui_field_add(msg[MSG_TEXT],text);
     		  stat_add=0;
     		  stat_size=0;
