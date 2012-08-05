@@ -66,7 +66,7 @@ static void decode_pattern(ptndesc_t *p_desc,uint8_t *p_image) {
   	for(x=0;x<p_desc->width;x++) {
   	  sample=(nib_get(p_track,nptrd-(x>>2))&(1<<(x&3)))?nib_get(p_track,nptrm-y):0xFF;
   	  if(sample>0x1&&sample<0xF) sample--;
-  		image_pset(p_image,p_desc->width,x,p_desc->height-(1+y),sample);
+  		image_pset(p_image,p_desc->width,XCAL(x,p_desc->width),YCAL(y,p_desc->height),sample);
   	}
   	nptrd+=stride;
   }
@@ -209,7 +209,7 @@ static uint16_t add_pattern(uint8_t *p_image,uint16_t w,uint16_t h) {
   	memset(p_memory,0,memo_bytes);
   	for(y=0;y<h;y++) {
   	  for(x=0;x<w;x++) {
-    	  sample=image_sample(p_image,w,x,h-(y+1));
+    	  sample=image_sample(p_image,w,XCAL(x,w),YCAL(y,h));
     	  if(sample!=0xFF) {
     	    nib_set(p_memory,(memo_bytes<<1)-(y+1),sample);
     	    break;
@@ -238,7 +238,7 @@ static uint16_t add_pattern(uint8_t *p_image,uint16_t w,uint16_t h) {
         // calculate index of the current bit
         bp_this=bp_line-x;
         // sample image
-        if(image_sample(p_image,w,x,h-(y+1))!=0xFF) bit_set(p_memory,bp_this);
+        if(image_sample(p_image,w,XCAL(x,w),YCAL(y,h))!=0xFF) bit_set(p_memory,bp_this);
       }
     }
   	// insert into memory @ PATTERN_PTR1

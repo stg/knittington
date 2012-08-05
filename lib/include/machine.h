@@ -10,6 +10,21 @@
 extern "C" {
 #endif
 
+#define FLIPX
+//#define FLIPY
+
+#ifdef FLIPX
+#define XCAL(X,W) (((W)-1)-(X))
+#else
+#define XCAL(X,W) (X)
+#endif
+
+#ifdef FLIPY
+#define YCAL(Y,H) (((H)-1)-(Y))
+#else
+#define YCAL(Y,H) (Y)
+#endif
+
 // pattern info
 typedef struct {
 	uint16_t id;
