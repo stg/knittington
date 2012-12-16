@@ -113,6 +113,21 @@ void senum(void (*fp_enum)(char *name, char *device)) {
 // device has form "COMn"
 bool sopen(char* device) {
   h_serial=CreateFile(device,GENERIC_READ|GENERIC_WRITE,0,0,OPEN_EXISTING,0,0);
+  if(h_serial==INVALID_HANDLE_VALUE) {
+  	// can't open port, verify format and...
+  	if(strlen(device)>=4) {
+  		if(memcmp(device,"COM",3)==0) {
+  			if(device[3]>='1'&&device[3]<='9') {
+  				// ..try alternate format (\\.\comN)
+  				char *dev=malloc(strlen(device)+5);
+  				strcpy(dev,"\\\\.\\com");
+  				strcat(dev,device+3);
+  				h_serial=CreateFile(dev,GENERIC_READ|GENERIC_WRITE,0,0,OPEN_EXISTING,0,0);
+  				free(dev);
+  			}
+  		}
+  	}
+  }
   return h_serial!=INVALID_HANDLE_VALUE;
 }
 
