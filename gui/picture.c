@@ -95,8 +95,7 @@ static hsv_color rgb_to_hsv(rgb_color rgb) {
 //              blues to reds via purple
 static uint8_t weight(color_list* color) {
   hsv_color hsv = rgb_to_hsv(color->color);
-  uint16_t h_weight = ((uint16_t)(0xFF-hsv.h) * (uint16_t)( hsv.s)) >> 4;
-  //uint16_t v_weight = ((uint16_t)hsv.v) << 7;
+  uint16_t h_weight = ((uint16_t)(0xFF-hsv.h) * (uint16_t)( hsv.s)) >> 2;
   uint16_t v_weight = ((color->color.r + color->color.g + color->color.b) / 3) << 7;
   return (h_weight + v_weight) >> 8;
 }
