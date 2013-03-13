@@ -1,0 +1,19 @@
+# Custom ports for display when clicking EMULATE
+#
+# DevicePath-1
+# DeviceName-1
+# DevicePath-2
+# DeviceName-2
+# ...
+# DevicePath-n
+# DeviceName-n
+#
+# Comments and empty lines are only allowed when expecting a device
+# path and such a line MUST be immediately followed by a name
+#
+# Example:
+#
+# /dev/ttyMyDevice
+# My custom serial adapter
+# /dev/ttyAnotherDev
+# Another serial device

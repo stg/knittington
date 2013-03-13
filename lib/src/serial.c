@@ -20,6 +20,16 @@
 #include <termios.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <dirent.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <libgen.h>
+#include <sys/ioctl.h>
+#include <linux/serial.h>
 #endif
 
 #ifdef _WIN32
@@ -187,9 +197,141 @@ bool sclose() {
 static int h_serial;
 static struct termios restore;
 
+static bool senum_primary(void (*fp_enum)(char *name, char *device)) {
+  // This should probe udev /dev/serial
+  return false;
+}
+
+static bool senum_fallback(void (*fp_enum)(char *name, char *device)) {
+  const char* sysdir = "/sys/class/tty/";
+  const char *devprefix = "/dev/";
+  const char *devsuffix = "/device";
+  const char *drvsuffix = "/driver";
+  int n;
+  struct dirent **namelist;
+  char* path;
+  char *device;
+  struct stat st;
+  char *devpath;
+  int ret;
+  ssize_t link_size;
+  char *driver;
+  char *buffer;
+  size_t buffer_size;
+  struct serial_struct serinfo;
+  int fd;
+  bool add_device;
+      
+  n = scandir(sysdir, &namelist, NULL, NULL);
+  if(n >= 0) {
+    while(n--) {
+      if(strcmp(namelist[n]->d_name, "..") && strcmp(namelist[n]->d_name, ".")) {
+        path = malloc(strlen(sysdir) + strlen(namelist[n]->d_name) + 1);
+        strcpy(path, sysdir);
+        strcat(path, namelist[n]->d_name);
+
+        // Get driver
+        driver = NULL;
+        buffer = NULL;
+        buffer_size = 32;
+        devpath = malloc(strlen(path) + strlen(devsuffix) + strlen(drvsuffix) + 1);
+        strcpy(devpath, path);
+        strcat(devpath, devsuffix);
+        ret = lstat(devpath, &st);
+        if(ret == 0 && S_ISLNK(st.st_mode)) {
+          strcat(devpath, drvsuffix);
+          do {    
+            if(buffer) free(buffer);
+            buffer_size <<= 1;
+            buffer = malloc(buffer_size + 1);
+            link_size = readlink(devpath, buffer, buffer_size);
+          } while(link_size > 0 && link_size >= buffer_size);
+          if(link_size > 0) {
+            buffer[link_size] = 0;
+            driver = malloc(strlen(basename(buffer)) + 1);
+            strcpy(driver, basename(buffer));
+          }
+          free(buffer);
+        }
+        free(devpath);
+        
+        // Check if driver exists
+        if(driver) {
+          add_device = false;
+          device = malloc(strlen(devprefix) + strlen(basename(path)) + 1);
+          strcpy(device, devprefix);
+          strcat(device, basename(path));
+          // Check driver type
+          if(!strcmp(driver, "serial8250")) {
+            // Probe all serial8250
+            fd = open(device, O_RDWR | O_NONBLOCK | O_NOCTTY);
+            if(fd >= 0) {
+              if (ioctl(fd, TIOCGSERIAL, &serinfo)==0) {
+                if(serinfo.type != PORT_UNKNOWN) {
+                  add_device = true;
+                }
+              }
+              close(fd);
+            }
+          } else {
+            add_device = true;
+          }
+          // Should we add this device?
+          if(add_device) {
+            buffer = malloc(strlen(device) + strlen(driver) + 2);
+            strcpy(buffer, device);
+            strcat(buffer, " ");
+            strcat(buffer, driver);
+            fp_enum(buffer, device);
+            free(buffer);
+          }
+          free(device);
+          free(driver);
+        }
+        
+        free(path);
+      }
+      free(namelist[n]);
+    }
+    free(namelist);
+  } else {
+    return false;
+  }
+  return true;
+}
+
 // posix - enumerate serial ports
 void senum(void (*fp_enum)(char *name, char *device)) {
-	// TODO: 
+  FILE *f;
+  char name[1024];
+  char device[1024];
+  if(!senum_primary(fp_enum)) {
+    senum_fallback(fp_enum);
+  }
+  // Final fallback, allow users to add ports manually via ports.rc
+  // This is quick and dirty, does not allow special characters like
+  // '\n' in filenames and filenames cannot start with '#'
+  // Comments and empty lines are only allowed when expecting a
+  // device path and such a line MUST be immediately followed by a name
+  f = fopen("ports.rc", "r");
+  if(f) {
+    while(!feof(f)) {
+      if(fgets(device, 1024, f)) {
+        if(strlen(device)) {
+          if(device[strlen(device) - 1] == '\n') device[strlen(device) - 1] = 0;
+        }
+        if(strlen(device)) {
+          if(device[0] != '#') {
+            if(fgets(name, 1024, f)) {
+              if(  name[strlen(  name) - 1] == '\n')   name[strlen(  name) - 1] = 0;
+              fp_enum(name, device);
+            }
+          }
+        }
+      }
+    }
+    fclose(f);
+  }
 }
 
 // posix - open serial port
