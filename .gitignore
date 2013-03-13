@@ -10,3 +10,4 @@ debug/
 debug.bat
 ptn_raw/
 serialdebug.c
+/test/
