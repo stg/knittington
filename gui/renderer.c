@@ -118,6 +118,8 @@ static SDL_Surface *get_bg() {
 	temp=bg;
 #ifdef SDL2
 	bg=SDL_ConvertSurface(temp,screen->format,0);
+	// SDL2 crashes on SDL_BlitSurface without this...
+	SDL_SetColorKey(bg,SDL_TRUE,SDL_MapRGB(screen->format,0xFF,0x00,0xFF));
 #else
 	bg=SDL_DisplayFormat(temp);
 #endif
@@ -211,10 +213,10 @@ void r_draw() {
   unsigned char x, y;
   unsigned char i, j;
   Uint32 SDL_color;
-  SDL_BlitSurface(bg,NULL,screen,NULL);
   write_index = 0;
   SDL_Rect srcrect;
   SDL_Rect dstrect;
+  SDL_BlitSurface(bg,NULL,screen,NULL);
   srcrect.w = 16;
   srcrect.h = 16;
   for( y = 0; y < r_h; y++ ) {
