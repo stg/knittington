@@ -53,10 +53,11 @@ Linux binares can be found in the bin-linux/ directory.
 This requires a modidifed SDL2 library to add xDnD support.
 Tested under Ubuntu only.
 
-Still no serial port detection effectively making the program useless
-for linux at this point. HELP WANTED!
+Serial port detection is working, but is limited! HELP WANTED!
+Should it fail, see bin-linux/ports.rc on how to manually add serial
+devices to the list of detected ports.
 
-The modified SDL2 .so file must be placed in the library search path.
+The custom libSDL2.so file must be placed in the library search path.
 Sorry for this odd procedure. HELP WANTED!
 
 == FILES =============================================================
