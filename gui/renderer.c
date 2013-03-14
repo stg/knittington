@@ -19,6 +19,15 @@ typedef struct {
   int16_t tick;
 } termchar_t;
 
+#ifdef SDL2
+typedef struct {
+	uint8_t *start;
+	uint8_t *end;
+	size_t size;
+	uint8_t *loc;
+} binary_resource_t;
+#endif
+
 static    termchar_t *term;
        			 uint8_t  r_w, r_h;
 static   SDL_Surface *font;
@@ -32,6 +41,9 @@ static   SDL_Surface *bg;
 static          char  cx = -1, cy, ct, cs;
 
 #ifdef SDL2
+extern uint8_t binary_res_ui_bmp_start[] asm("_binary_res_ui_bmp_start");
+extern uint8_t binary_res_ui_bmp_end[] asm("_binary_res_ui_bmp_end");
+
 static SDL_PixelFormat fmt_rgb = {
     0,NULL,32,4,{0,0},
 		0xFF000000,0x00FF0000,
@@ -127,13 +139,91 @@ static SDL_Surface *get_bg() {
 	return bg;
 }
 
+#ifdef SDL2
+
+static Sint64 binary_size(struct SDL_RWops * context) {
+	binary_resource_t *p_res = context->hidden.unknown.data1;
+	return p_res->size;
+}
+
+static Sint64 binary_seek(struct SDL_RWops *context, Sint64 offset, int whence) {
+	binary_resource_t *p_res = context->hidden.unknown.data1;
+	switch(whence) {
+		case RW_SEEK_SET:
+			p_res->loc = p_res->start + offset;
+			break;
+		case RW_SEEK_CUR:
+			p_res->loc = p_res->loc + offset;
+			break;
+		case RW_SEEK_END:
+			p_res->loc = p_res->end + offset;
+			break;
+	}
+	if(p_res->loc < p_res->start) p_res->loc = p_res->start;
+	else if(p_res->loc > p_res->end) p_res->loc = p_res->end;
+	return p_res->loc - p_res->start;
+}
+
+static size_t binary_read(struct SDL_RWops *context, void *ptr, size_t size, size_t maxnum) {
+	binary_resource_t *p_res = context->hidden.unknown.data1;
+  size_t numleft = (p_res->end - p_res->loc) / size;
+  if(maxnum > numleft) maxnum = numleft;
+  size_t bytecount = size * maxnum;
+  memcpy(ptr, p_res->loc, bytecount);
+  p_res->loc += bytecount;
+  return maxnum;
+}
+
+static size_t binary_write(struct SDL_RWops *context, const void *ptr, size_t size, size_t num) {
+  SDL_SetError("Binary resources cannot be written");
+  return -1;
+}
+
+static int binary_close(struct SDL_RWops *context) {
+  if(context->type != 0xB1347420) {
+    SDL_SetError("Bad SDL_RWops type");
+    return -1;
+  }
+  free(context->hidden.unknown.data1);
+  SDL_FreeRW(context);
+  return 0;
+}
+
+static SDL_RWops *binary_rwop(uint8_t *start, uint8_t *end) {
+  SDL_RWops *brw = SDL_AllocRW();
+  if(!brw) return NULL;
+  binary_resource_t *p_res = malloc(sizeof(binary_resource_t));
+  if(!p_res) {
+  	SDL_FreeRW(brw);
+  	return NULL;
+  }
+  brw->seek  = binary_seek;
+  brw->read  = binary_read;
+  brw->write = binary_write;
+  brw->close = binary_close;
+  brw->type  = 0xB1347420;
+  brw->hidden.unknown.data1 = p_res;
+  p_res->start = start;
+  p_res->end = end;
+  p_res->size = end - start;
+  p_res->loc = start;
+  return brw;
+}
+
+#endif
+
 static SDL_Surface *get_font() {
 	SDL_Surface *temp, *font;
 	int32_t count;
 	uint8_t color,fade;
 	uint8_t *p_src,*p_dst;
 	uint8_t r,g,b,a;
+#ifdef SDL2
+	SDL_RWops *ui = binary_rwop(binary_res_ui_bmp_start, binary_res_ui_bmp_end);
+  temp=SDL_LoadBMP_RW(ui, true);
+#else
   temp=SDL_LoadBMP("ui.bmp");
+#endif
   if(!temp) return NULL;
   font=SDL_ConvertSurface(temp,&fmt_rgb,SDL_SWSURFACE);
   SDL_FreeSurface(temp);
