@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "image.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -40,12 +42,12 @@ typedef struct {
   char *name;
   uint16_t (*memory_used)(ptndesc_t* p_desc);
   bool (*decode_header)(ptndesc_t* p_desc,uint8_t index);
-  void (*decode_pattern)(ptndesc_t* p_desc,uint8_t *p_image);
+  void (*decode_pattern)(ptndesc_t* p_desc, image_st *image);
   void (*format)(void);
   void (*set_track)(uint8_t track);
   uint8_t (*get_track)(void);
   bool (*size_check)(uint16_t width,uint16_t height);
-  uint16_t (*add_pattern)(uint8_t *p_image,uint16_t width,uint16_t height);
+  uint16_t (*add_pattern)(image_st *image);
   uint16_t (*free_memory)();
   uint16_t (*needed_memory)(uint16_t w,uint16_t h);
   void (*info)(FILE *output);

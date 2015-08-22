@@ -5,7 +5,8 @@ This format is for legacy use by the CLI utility ONLY.
 All values are big-endian where appropriate.
 
 Offset    Bytes        Content
-0x0000    2            Width in pixels/stitches
+0x0000    2            Width in pixels/stitches,
+                       highest bit = explicit memo enable.
 0x0002    2            Height in pixels/rows
 0x0008    width*height Pixel data - top-down, left-right
 
@@ -22,6 +23,33 @@ Example, letter P, 6x9 pixels, 58 bytes, hexadecimal:
   FF 00 FF FF FF FF
   FF 00 FF FF FF FF
   FF FF FF FF FF FF
+
+Example, letter P, 6x9 stiches, 67 bytes, hexadecimal, explicit memo:
+in this mode, we insert an extra byte in front of each row to indicate
+the display memo.
+
+  Memo encoding value are can set the highest bit of the first nibble to
+  enable blinking. Blinking is only available for digits 0 to 4, non
+  blinking 0 does not exist, and 1-9 are available for non blinking.
+
+  memo byte = b___dddd
+              |   |||\
+              |   \---\- digit 0-9
+              |
+              \_________ blinking bit
+
+  80 06
+  00 09
+  00 FF FF FF FF FF FF
+  00 FF 00 00 00 FF FF
+  00 FF 00 FF FF 00 FF
+  00 FF 00 FF FF 00 FF
+  01 FF 00 00 00 FF FF
+  02 FF 00 FF FF FF FF
+  03 FF 00 FF FF FF FF
+  04 FF 00 FF FF FF FF
+  05 FF FF FF FF FF FF
+
 
 Pixel values for single color patterns:
 

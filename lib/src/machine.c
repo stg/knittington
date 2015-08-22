@@ -34,7 +34,8 @@ static void machine_add(const char *p_code,void(*fp_init)(machine_t*,uint8_t*,ui
 void machine_init() {
 	machine_add("kh950",kh940_init); // KH-950 uses same module as KH-940
 	machine_add("kh940",kh940_init); // KH-940
-	machine_add("kh930",kh930_init); // KH-930
+//  TODO(ajo): update kh930 support to new structures
+//	machine_add("kh930",kh930_init); // KH-930
 }
 
 // Retrieve machine descriptor

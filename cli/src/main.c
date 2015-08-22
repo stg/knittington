@@ -135,17 +135,20 @@ static void cmd_track() {
 	}
 }
 
-// print image to screen
-static void image_print(uint8_t *p_img,uint16_t w,uint16_t h) {
+// print image to screen TODO(ajo): move to image.c
+static void image_print(image_st *image) {
 	uint16_t x,y;
-	uint8_t sample,memo;
-	for(y=0;y<h;y++) {
+	uint8_t sample, memo;
+	for(y=0;y<image->height;y++) {
 		memo=0;
-		for(x=0;x<w;x++) {
-		  sample=image_sample(p_img,w,x,y);
+            for(x=0;x<image->width;x++) {
+              sample=image_sample(image, x, y);
 		  if(memo==0&&sample!=0xFF) memo=sample&0xF;
 			putchar(sample!=0xFF?'X':'-');
 		}
+        if (image->explicit_memo)
+            memo = image->p_memo[y];
+
 		printf(" %01X\n",memo);
 	}
 }
@@ -155,8 +158,8 @@ static void cmd_show() {
 	uint8_t n;
 	uint16_t ptn_id;
 	ptndesc_t desc;
-	uint8_t *p_img;
-	for(n=0;n<98;n++) {
+    image_st *image;
+    for(n=0;n<98;n++) {
 		if(p_mach->decode_header(&desc,n)) {
 			printf("pattern %i is %ix%i @0x%04X\n",desc.id,desc.width,desc.height,desc.pattern);
 		}
@@ -168,10 +171,11 @@ static void cmd_show() {
 		ptn_id=str_to_id(cmd);
 		if(ptn_id) {
 			if(find_pattern(&desc,ptn_id)){
-				p_img=image_alloc(desc.width,desc.height);
-				p_mach->decode_pattern(&desc,p_img);
-				image_print(p_img,desc.width,desc.height);
-				free(p_img);
+				image = image_alloc(desc.width, desc.height, 0);
+                //TODO: decode also memo data to image_st
+				p_mach->decode_pattern(&desc, image);
+				image_print(image);
+				free(image);
 			} else {
 				printf("pattern number %i does not exist\n",ptn_id);
         if(halt) exit(1);
@@ -185,7 +189,7 @@ static void cmd_show() {
 
 // add pattern from file
 static void cmd_add() {	
-	uint8_t *p_img;
+    image_st *image;
 	uint16_t w,h;
 	FILE *f;
 	uint16_t ptn_id;
@@ -194,23 +198,26 @@ static void cmd_add() {
 	if(read_cmd("")) {
 	  f=fopen(cmd,"rb");
 	  if(f) {
-      // read image file
-      p_img=(uint8_t*)image_read(f,&w,&h);
+        // read image file
+        if (image = image_read(f)) {
+            w = image->width;
+            h = image->height;
+        }
 	  	fclose(f);
 	  	// verify machine capability
 	  	if(p_mach->size_check(w,h)) {
-	      if(p_img) {
+	      if(image) {
 	      	// display
-	      	image_print(p_img,w,h);
-					// add pattern to memory
-					ptn_id=p_mach->add_pattern(p_img,w,h);
-					if(ptn_id==0) {
-	      	  printf("not enough memory to store pattern\n");
-		  		  if(halt) {
-		  		  	free(p_img);
+	      	image_print(image);
+			// add pattern to memory
+			ptn_id=p_mach->add_pattern(image);
+			if(ptn_id==0) {
+	      	    printf("not enough memory to store pattern\n");
+		  	    if(halt) {
+		  		  	free(image);
 		  		  	exit(1);
-		  		  }
-					}
+		  	    }
+			}
 	      	if(find_pattern(&desc,ptn_id) ) {
 	      		printf("added pattern %i as %ix%i @0x%04X\n",desc.id,desc.width,desc.height,desc.pattern);
 	      	} else {
@@ -218,7 +225,7 @@ static void cmd_add() {
 	      		printf("memory may be corrupted, format suggested\n");
 	      	}
 	      	// free loaded data
-	      	free(p_img);
+	      	free(image);
 	  		} else {
 	  		  printf("file does not have the correct format\n");
 	  		  if(halt) exit(1);
