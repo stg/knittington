@@ -135,24 +135,6 @@ static void cmd_track() {
 	}
 }
 
-// print image to screen TODO(ajo): move to image.c
-static void image_print(image_st *image) {
-	uint16_t x,y;
-	uint8_t sample, memo;
-	for(y=0;y<image->height;y++) {
-		memo=0;
-            for(x=0;x<image->width;x++) {
-              sample=image_sample(image, x, y);
-		  if(memo==0&&sample!=0xFF) memo=sample&0xF;
-			putchar(sample!=0xFF?'X':'-');
-		}
-        if (image->explicit_memo)
-            memo = image->p_memo[y];
-
-		printf(" %01X\n",memo);
-	}
-}
-
 // display patterns contained in memory
 static void cmd_show() {
 	uint8_t n;

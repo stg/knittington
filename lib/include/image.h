@@ -26,6 +26,9 @@ typedef struct {
 // allocate memory for image
 image_st *image_alloc(uint16_t width,uint16_t height,int explicit_memo);
 
+// print image to stdout
+void image_print(image_st *image);
+
 // get pixel from image
 uint8_t image_sample(image_st *image,uint16_t x,uint16_t y);
 
