@@ -115,6 +115,7 @@ static bool build_image() {
 	uint16_t w,h;
 	uint16_t ptn;
 	listitem_t *p_item;
+    image_st *image;
 	p_item=((list_t*)top[TOP_LIST]->obj)->list;
 
 	p_mach->format();
@@ -124,11 +125,15 @@ static bool build_image() {
 	while(p_item) {
 		w=((uint16_t*)p_item->data)[0];
 		h=((uint16_t*)p_item->data)[1];
-		if(!p_mach->add_pattern(&((uint8_t*)p_item->data)[4],w,h)) {
+        image = image_alloc(w, h, 0);
+        memcpy(image->p_image, p_item->data+4, w*h);
+		if(!p_mach->add_pattern(image)) {
 			sprintf(text,"OUT OF MEMORY WHEN ADDING \nPATTERN %i. REMOVE SOME\nPATTERNS AND TRY AGAIN.",ptn);
 			ui_field_add(msg[MSG_TEXT],text);
+            free(image);
 			return false;
 		}
+        free(image);
 		ptn++;
 		p_item=p_item->next;
 	}
