@@ -60,5 +60,5 @@ bool machine_emulate(char *device,FILE *verbose,void (*fp_event)(uint8_t event,u
 
 // Stop the emulator
 void machine_emulate_stop() {
-	emulate_stop();	
+	emulate_stop();
 }

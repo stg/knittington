@@ -28,18 +28,18 @@ static bool decode_header(ptndesc_t *p_desc,uint8_t index) {
 	uint8_t *p_hdr=&p_track[index*7];
 	if(p_hdr[0]!=0x00) {
 		p_desc->location = 0x7FF-(index*7);
-		p_desc->pattern =p_hdr[0]<<8;			
-		p_desc->pattern|=p_hdr[1];					
+		p_desc->pattern =p_hdr[0]<<8;
+		p_desc->pattern|=p_hdr[1];
 		p_desc->height =MSN(p_hdr[2])*100;
-		p_desc->height+=LSN(p_hdr[2])*10; 
-		p_desc->height+=MSN(p_hdr[3])*1;  
+		p_desc->height+=LSN(p_hdr[2])*10;
+		p_desc->height+=MSN(p_hdr[3])*1;
 		p_desc->width  =LSN(p_hdr[3])*100;
-		p_desc->width +=MSN(p_hdr[4])*10; 
+		p_desc->width +=MSN(p_hdr[4])*10;
 		p_desc->width +=LSN(p_hdr[4])*1;
 		if(p_desc->width==0&&p_desc->height==0) return false;
 		if(MSN(p_hdr[5])!=0) return false;
 		p_desc->id =LSN(p_hdr[5])*100;
-		p_desc->id+=MSN(p_hdr[6])*10; 
+		p_desc->id+=MSN(p_hdr[6])*10;
 		p_desc->id+=LSN(p_hdr[6])*1;
 		if(p_desc->id==0) return false;
 		if(p_desc->id>=901&&p_desc->id<=998) return true;
@@ -48,8 +48,8 @@ static bool decode_header(ptndesc_t *p_desc,uint8_t index) {
 }
 
 // decode a pattern from memory
-// caller must make sure p_image can hold image by using image_alloc
-static void decode_pattern(ptndesc_t *p_desc,uint8_t *p_image) {
+// caller must make sure image can hold image by using image_alloc
+static void decode_pattern(ptndesc_t *p_desc,image_st *image) {
 	uint32_t stride,memo,nptrd,nptrm;
 	uint32_t x,y;
 	uint8_t sample;
@@ -66,7 +66,7 @@ static void decode_pattern(ptndesc_t *p_desc,uint8_t *p_image) {
   	for(x=0;x<p_desc->width;x++) {
   	  sample=(nib_get(p_track,nptrd-(x>>2))&(1<<(x&3)))?nib_get(p_track,nptrm-y):0xFF;
   	  if(sample>0x1&&sample<0xF) sample--;
-  		image_pset(p_image,p_desc->width,XCAL(x,p_desc->width),YCAL(y,p_desc->height),sample);
+  		image_pset(image,XCAL(x,p_desc->width),YCAL(y,p_desc->height),sample);
   	}
   	nptrd+=stride;
   }
@@ -167,11 +167,11 @@ static uint16_t free_memory() {
 // return amount of needed memory
 static uint16_t needed_memory(uint16_t w,uint16_t h) {
 	return ((h+1)>>1)+(((((w+3)>>2)*h)+1)>>1);
-}  
+}
 
 // add pattern to memory
-// p_image must have width*height bytes
-static uint16_t add_pattern(uint8_t *p_image,uint16_t w,uint16_t h) {
+// image must have width*height bytes
+static uint16_t add_pattern(image_st *image) {
 	uint8_t   n;
 	uint8_t   sample;
 	uint16_t  ptn_id;
@@ -195,68 +195,77 @@ static uint16_t add_pattern(uint8_t *p_image,uint16_t w,uint16_t h) {
 	  }
 	}
 
-  // remember bottom offset
+    // remember bottom offset
 	o_bottom=int_get(p_track,0x700);
 
-  // calculate bytes needed to store pattern
-	memo_bytes=(h+1)>>1;
-	data_bytes=((((w+3)>>2)*h)+1)>>1;
-	
+    // calculate bytes needed to store pattern
+	memo_bytes=(image->height+1)>>1;
+	data_bytes=((((image->width+3)>>2)*image->height)+1)>>1;
+
 	// Check memory availability (should be 0x2AE, but leave some to be sure)
 	if(0x7FF-(o_bottom+memo_bytes+data_bytes)>=0x2B0&&ptn_id<999) {
   	// make memo data
   	p_memory=(uint8_t*)malloc(memo_bytes);
   	memset(p_memory,0,memo_bytes);
-  	for(y=0;y<h;y++) {
-  	  for(x=0;x<w;x++) {
-    	  sample=image_sample(p_image,w,XCAL(x,w),YCAL(y,h));
-    	  if(sample!=0xFF) {
-    	    nib_set(p_memory,(memo_bytes<<1)-(y+1),sample);
-    	    break;
-    	  }
-  	  }
-  	}
-  	// insert into memory @ PATTERN_PTR1
+
+    for(y=0; y<image->height; y++) {
+        if (image->explicit_memo) {
+            nib_set(p_memory, y, image->p_memo[y]);
+        } else {
+  	        for(x=0;x<image->width;x++) {
+    	        sample=image_sample(image,
+                                    XCAL(x,image->width),
+                                    YCAL(y,image->height));
+    	        if(sample!=0xFF) {
+    	            nib_set(p_memory,(memo_bytes<<1)-(y+1),sample);
+    	            break;
+    	        }
+  	        }
+  	    }
+    }
+
+    // insert into memory @ PATTERN_PTR1
   	memcpy(&p_track[0x800-int_get(p_track,0x700)-memo_bytes],p_memory,memo_bytes);
   	// update PATTERN_PTR1
   	int_set(p_track,0x700,int_get(p_track,0x700)+memo_bytes);
     // free memo data
-    free(p_memory);	  	
-  	
+    free(p_memory);
+
   	// make pattern data
   	p_memory=(uint8_t*)malloc(data_bytes);
   	memset(p_memory,0,data_bytes);
   	// stride (bits per row)
-  	b_stride=(w+3)&~3;
+  	b_stride=(image->width+3)&~3;
   	// calculate index of last bit in pattern
   	bp_last=(data_bytes<<3)-1;
 		// set pattern data
-		for(y=0;y<h;y++) {
+		for(y=0;y<image->height;y++) {
       // calculate index of last bit on line
-      bp_line=bp_last-b_stride*(h-y-1);
-      for(x=0;x<w;x++) {
+      bp_line=bp_last-b_stride*(image->height-y-1);
+      for(x=0;x<image->width;x++) {
         // calculate index of the current bit
         bp_this=bp_line-x;
         // sample image
-        if(image_sample(p_image,w,XCAL(x,w),YCAL(y,h))!=0xFF) bit_set(p_memory,bp_this);
+        if(image_sample(image,XCAL(x,image->width),
+                              YCAL(y,image->height))!=0xFF) bit_set(p_memory,bp_this);
       }
     }
   	// insert into memory @ PATTERN_PTR1
   	memcpy(&p_track[0x0800-int_get(p_track,0x700)-data_bytes],p_memory,data_bytes);
   	// update PATTERN_PTR1
   	int_set(p_track,0x700,int_get(p_track,0x700)+data_bytes);
-    // free pattern data 
+    // free pattern data
   	free(p_memory);
 
   	// write header
   	p_track[hdr_index*7+0]=o_bottom>>8;						  // byte 0
   	p_track[hdr_index*7+1]=o_bottom&0x00FF;					// byte 1
-		nib_set(p_track,hdr_index*14+ 4,bcd_get(h,100));			// byte 2
-		nib_set(p_track,hdr_index*14+ 5,bcd_get(h, 10));
-		nib_set(p_track,hdr_index*14+ 6,bcd_get(h,  1));  		// byte 3
-		nib_set(p_track,hdr_index*14+ 7,bcd_get(w,100));
-		nib_set(p_track,hdr_index*14+ 8,bcd_get(w, 10));			// byte 4
-		nib_set(p_track,hdr_index*14+ 9,bcd_get(w,  1));
+		nib_set(p_track,hdr_index*14+ 4,bcd_get(image->height,100));			// byte 2
+		nib_set(p_track,hdr_index*14+ 5,bcd_get(image->height, 10));
+		nib_set(p_track,hdr_index*14+ 6,bcd_get(image->height,  1));  		// byte 3
+		nib_set(p_track,hdr_index*14+ 7,bcd_get(image->width,100));
+		nib_set(p_track,hdr_index*14+ 8,bcd_get(image->width, 10));			// byte 4
+		nib_set(p_track,hdr_index*14+ 9,bcd_get(image->width,  1));
 		nib_set(p_track,hdr_index*14+10,0);							 			// byte 5
 		nib_set(p_track,hdr_index*14+11,bcd_get(ptn_id,100));
 		nib_set(p_track,hdr_index*14+12,bcd_get(ptn_id, 10)); // byte 6
@@ -269,7 +278,7 @@ static uint16_t add_pattern(uint8_t *p_image,uint16_t w,uint16_t h) {
 		nib_set(p_track,hdr_index*14+12,bcd_get(ptn_id+1, 10)); // byte 6
 		nib_set(p_track,hdr_index*14+13,bcd_get(ptn_id+1,  1));
 
-		// write LOADED_PATTERN 
+		// write LOADED_PATTERN
 		nib_set(p_track,(0x7EA<<1)+0,0x01);
 		nib_set(p_track,(0x7EA<<1)+1,bcd_get(ptn_id,100));
 		nib_set(p_track,(0x7EA<<1)+2,bcd_get(ptn_id, 10));
@@ -277,7 +286,7 @@ static uint16_t add_pattern(uint8_t *p_image,uint16_t w,uint16_t h) {
 
 		// write UNK1
 		int_set(p_track,0x702,0x0001);
-		
+
 		// copy PATTERN_PTR1 to PATTERN_PTR2
 		int_set(p_track,0x704,int_get(p_track,0x700));
 
@@ -306,7 +315,7 @@ static void info(FILE *output) {
 	uint8_t rep[5];
 	uint16_t addr;
 	ptndesc_t desc, temp;
-	
+
 	// read selected pattern
 	sel_pattern = LSN(p_track[0x7EA]) * 100
 	            + MSN(p_track[0x7EB]) * 10
@@ -322,7 +331,7 @@ static void info(FILE *output) {
 	  if(decode_header(&temp,n)) desc=temp;
 	}
 	last_pattern=desc.id;
-	
+
 	// Check CONTROL_DATA
 	fprintf(output,"ADDRESS FORMAT     CONTENT         VALUE\n");
 	fprintf(output,"0x700  0x0120     write pointer : 0x%04X     ",int_get(p_track,0x700));
@@ -349,7 +358,7 @@ static void info(FILE *output) {
 	if(last_pattern==sel_pattern&&MSN(p_track[0x7EA])==1) fprintf(output,"OK\n"); else fprintf(output,"FAIL\n");
 	fprintf(output,"0x7FF  0x00       unknown       : 0x%02X       ", p_track[0x7FF]);
 	fprintf(output,"?\n");
-	
+
 	fprintf(output,"\n");
 
 	// Just print AREA2 - don't know how to check, seems to not matter
@@ -374,9 +383,9 @@ static void info(FILE *output) {
 		fprintf(output,"AREA4                                        FAIL\n");
 		print_hex(output,&p_track[0x7EC],19);
 	}
-	
+
 	fprintf(output,"\n");
-	
+
 	// Check FINHDR
 	fprintf(output,"FINHDR  ");
 	print_slim_hex(output,&p_track[0x7FF-desc.location+7],7);

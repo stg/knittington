@@ -127,6 +127,12 @@ Offset    Bytes        Content
 
     Write as: 0x00
 
+    Memo encoding nibbles:
+       0   = OFF
+       1-9 = 1-9
+       A-E = 0-4 blinking
+       F   = OFF
+
   DATA
 
     Each row of the pattern requires WIDTH bits for storage and

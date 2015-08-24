@@ -250,3 +250,18 @@ Will do the following:
 
 In addition commands can also be piped in, or typed manually in
 succession at any prompt within the program.
+
+== LACE TOOL COMPILER ================================================
+
+A lace tool compiler is included in the lace/ directory, this compiler
+works with the brother lace tool, supporting normal and fine lace.
+The purpose of the lace tool is to move or join stitches across neddles,
+see the lace tool ASCII format defined in doc/lace_format.rst
+
+You can use it from command line like this:
+
+python lace/lace_compiler.py lace/examples/fox.lace out.raw && \
+           ./bin-linux/cli a out.raw e /dev/ttyUSB0 q
+
+There's no gui support for it yet.
+
